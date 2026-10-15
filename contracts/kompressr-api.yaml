@@ -1,0 +1,1144 @@
+openapi: 3.1.0
+info:
+  title: Kompressr API
+  version: 1.0.0
+  description: Upload, inspect, permanently delete, and mint private URLs for Kompressr assets.
+servers:
+  - url: https://kompressr.com
+    description: Production management and platform API
+security:
+  - bearerAuth: []
+paths:
+  /api/assets:
+    get:
+      summary: List current or historical assets in the credential scope
+      operationId: listAssets
+      description: >-
+        Customer project keys cover uploads and URL-prepend assets in their project.
+        Scoped keys require list and remain limited to their upload identity, types,
+        and visibility. The project is inferred from the key; no project_id is required.
+        Results are ordered by descending asset ID.
+        accounting_status and last_failure are omitted and
+        storage_credited_mb is always 0. Use GET /api/assets/{id} for those details.
+        Response data is an array, with page, limit, and total alongside it.
+      parameters:
+        - in: query
+          name: deletion_status
+          description: Select current assets, accepted deletions, completed deletions, or historical deletions.
+          schema: {type: string, enum: [active, deleting, deleted, legacy_deleted], default: active}
+        - in: query
+          name: page
+          description: Values below 1 or invalid values use page 1.
+          schema: {type: integer, minimum: 1, default: 1}
+        - in: query
+          name: limit
+          description: Defaults to 10 and supports up to 100. Invalid/nonpositive values use the default; higher values are capped.
+          schema: {type: integer, minimum: 1, default: 10}
+      responses:
+        '200':
+          description: Paginated asset list.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetListResponse'}
+              example:
+                data:
+                  - {id: 123, project_id: 660e8400-e29b-41d4-a716-446655440001, kind: 1, source: upload, processing_status: 3, deletion_status: active, storage_credited_mb: 0}
+                page: 1
+                limit: 10
+                total: 1
+        '400': {description: Invalid deletion_status filter, $ref: '#/components/responses/Error'}
+        '401': {description: Missing or invalid bearer key, $ref: '#/components/responses/Error'}
+        '403': {description: Missing list scope or inactive project, $ref: '#/components/responses/Error'}
+        '429': {description: Rate limited; wait before retrying, $ref: '#/components/responses/Error'}
+        '500': {description: Could not retrieve assets; retry the request, $ref: '#/components/responses/Error'}
+  /api/assets/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        description: Numeric asset ID from an upload response or asset list; not a CDN URL or customer external_id.
+        schema: {type: integer, format: int64, minimum: 1}
+    get:
+      summary: Inspect asset processing and permanent deletion
+      operationId: getAssetDeletionStatus
+      description: >-
+        Scoped keys require status. Returns the asset's state directly, without a
+        success/data envelope. Use this endpoint to check deletion progress and storage
+        credits. Active assets omit accounting_status and last_failure. Historical
+        status remains available by asset ID, even if a newer asset reuses the same URL.
+        Cached copies may remain available after file removal.
+      responses:
+        '200':
+          description: Asset status, deletion progress, and storage credits.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetDeletionState'}
+              example: {id: 123, project_id: 660e8400-e29b-41d4-a716-446655440001, kind: 1, source: upload, processing_status: 6, deletion_status: deleted, deletion_requested_at: '2026-09-17T10:30:00Z', storage_credited_mb: 2, accounting_status: settled}
+        '400': {description: Asset ID must be a positive integer, $ref: '#/components/responses/Error'}
+        '401': {description: Missing or invalid bearer key, $ref: '#/components/responses/Error'}
+        '403': {description: Missing status scope or inactive project, $ref: '#/components/responses/Error'}
+        '404': {description: Missing or outside the credential scope, $ref: '#/components/responses/Error'}
+        '429': {description: Rate limited; wait before retrying, $ref: '#/components/responses/Error'}
+        '500': {description: Could not retrieve asset state, $ref: '#/components/responses/Error'}
+        '503': {description: REQUEST_LIMIT_REACHED; retry the same asset ID, $ref: '#/components/responses/Error'}
+    delete:
+      summary: Permanently delete an asset
+      operationId: deleteAsset
+      description: >-
+        Irreversible; no recovery window or cancellation. Customer project keys have
+        project authority; scoped keys need explicit opt-in delete permission.
+        Default scoped keys do not include delete permission.
+        No request body is required. Files are removed in the background.
+        A 202 confirms the request was accepted; file removal may still be pending.
+        Cached copies may remain available until the cache is cleared.
+        The optional delivery_status field is deprecated and omitted.
+        Storage credits follow recorded file removal. The response is the asset state
+        directly, without a success/data envelope. Retry the same ID safely even after
+        a timeout or lost response; that ID cannot delete its replacement.
+        Browser/offline copies cannot be recalled. An explicit reupload or fresh
+        URL-prepend regeneration can reuse the URL with a new asset ID.
+      responses:
+        '202':
+          description: Deletion accepted; file removal may still be pending.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetDeletionState'}
+              examples:
+                upload:
+                  value: {id: 123, project_id: 660e8400-e29b-41d4-a716-446655440001, kind: 1, deletion_requested_at: '2026-09-17T10:30:00Z', deletion_status: deleting, processing_status: 3, source: upload, storage_credited_mb: 0}
+        '200':
+          description: Already complete; describes the old asset without touching its reusable URL.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetDeletionState'}
+              example: {id: 123, project_id: 660e8400-e29b-41d4-a716-446655440001, kind: 1, source: upload, processing_status: 6, deletion_status: deleted, deletion_requested_at: '2026-09-17T10:30:00Z', storage_credited_mb: 2, accounting_status: settled}
+        '400': {description: Asset ID must be a positive integer, $ref: '#/components/responses/Error'}
+        '401': {description: Missing or invalid bearer key, $ref: '#/components/responses/Error'}
+        '403': {description: Missing delete scope or inactive project, $ref: '#/components/responses/Error'}
+        '404': {description: Missing or outside the credential scope, $ref: '#/components/responses/Error'}
+        '409': {description: ASSET_LEGACY_REVIEW_REQUIRED; contact support for this historical record, $ref: '#/components/responses/Error'}
+        '429': {description: Rate limited; wait before retrying, $ref: '#/components/responses/Error'}
+        '500': {description: ASSET_DELETION_FAILED; inspect or retry the same ID, $ref: '#/components/responses/Error'}
+        '503':
+          $ref: '#/components/responses/Error'
+          description: >-
+            If the response says "asset deletion is not enabled", contact support.
+            ASSET_DELETION_UNAVAILABLE means no new deletion was accepted because
+            cleanup is temporarily unavailable; retry later. Previously accepted
+            requests remain accepted and can still be inspected.
+            REQUEST_LIMIT_REACHED means the request timed out. A timeout can occur
+            after acceptance; inspect or retry the same ID before assuming no action occurred.
+  /api/assets/bulk-delete:
+    post:
+      summary: Permanently delete an explicit selection of assets
+      operationId: bulkDeleteAssets
+      description: >-
+        Requires a customer project key or an explicit delete scope on a scoped key.
+        The same permanence, delivery, and cleanup rules as single deletion apply.
+        Validates the entire body before mutation, including unknown fields and the
+        8192-byte body limit. Supply 1-100 IDs before deduplication; duplicates are
+        processed once in first-seen order. Each unique ID succeeds or fails independently.
+        HTTP 200 does not imply all IDs were accepted: inspect results[].accepted and
+        counts.failed. Retry only unsuccessful IDs after resolving their errors.
+        After a timeout or lost response, inspect or repeat the same IDs; acceptance may already
+        have occurred. Retrying an old ID cannot delete its replacement. No implicit
+        all-matching selection is supported.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [asset_ids]
+              properties:
+                asset_ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: {type: integer, format: int64, minimum: 1}
+            example: {asset_ids: [123, 124]}
+      responses:
+        '200':
+          description: Ordered per-item HTTP statuses, acceptance, state or safe error, and counts
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetBulkDeletionResponse'}
+              example:
+                results:
+                  - {id: 123, status: 202, accepted: true, state: {id: 123, project_id: 660e8400-e29b-41d4-a716-446655440001, kind: 1, source: upload, processing_status: 3, deletion_status: deleting, deletion_requested_at: '2026-09-17T10:30:00Z', storage_credited_mb: 0}}
+                  - {id: 124, status: 404, accepted: false, code: ASSET_NOT_FOUND, error: Asset not found.}
+                counts: {total: 2, accepted: 1, failed: 1}
+        '400': {description: Invalid body or selection; no mutations, $ref: '#/components/responses/Error'}
+        '401': {description: Missing or invalid bearer key, $ref: '#/components/responses/Error'}
+        '403': {description: Missing delete scope or inactive project, $ref: '#/components/responses/Error'}
+        '413': {description: Body exceeds 8192 bytes; no mutations, $ref: '#/components/responses/Error'}
+        '429': {description: Rate limited; wait before retrying, $ref: '#/components/responses/Error'}
+        '500': {description: Could not process the request; inspect or retry the same IDs, $ref: '#/components/responses/Error'}
+        '503': {description: Asset deletion is unavailable; contact support, $ref: '#/components/responses/Error'}
+  /api/v1/assets/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer, format: int64, minimum: 1}
+    get:
+      summary: Session asset detail
+      security: [{sessionCookie: []}]
+      description: Requires an authenticated organization session; returns the same safe state as the credential detail route.
+      responses:
+        '200':
+          description: Safe asset state
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetDeletionState'}
+        '401': {description: Missing or expired session}
+        '404': {description: Missing or outside the organization}
+    delete:
+      summary: Session permanent asset deletion
+      security: [{sessionCookie: []}]
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: {type: string}
+      description: Requires organization admin, session, CSRF, and dashboard rate limits. Exhausted quota or an absent subscription does not prevent deletion.
+      responses:
+        '202':
+          description: Accepted; file removal may still be pending.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetDeletionState'}
+        '200':
+          description: Already complete
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetDeletionState'}
+        '403': {description: Missing admin authority or invalid CSRF token}
+        '404': {description: Missing or outside the organization}
+        '409': {description: Contact support for this historical deletion.}
+        '503': {description: Deletion disabled or temporarily unavailable (ASSET_DELETION_UNAVAILABLE), or request timed out (REQUEST_LIMIT_REACHED). A timeout may follow acceptance; inspect or retry the same ID.}
+  /api/v1/assets/bulk-delete:
+    post:
+      summary: Session bulk permanent asset deletion
+      security: [{sessionCookie: []}]
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: {type: string}
+      description: Requires organization admin and CSRF. Accepts only explicit IDs, with the same per-asset results and retry guidance as the credential route.
+      requestBody:
+        $ref: '#/paths/~1api~1assets~1bulk-delete/post/requestBody'
+      responses:
+        '200':
+          $ref: '#/paths/~1api~1assets~1bulk-delete/post/responses/200'
+        '400': {description: Invalid body or selection; no mutations}
+        '403': {description: Missing admin authority or invalid CSRF token}
+        '413': {description: Body exceeds 8192 bytes; no mutations}
+  /api/upload:
+    post:
+      servers:
+        - url: https://uploads.kompressr.com
+          description: Production upload bodies
+      summary: Upload an asset
+      operationId: uploadAsset
+      description: Put all multipart options before the file part; fields after the file are not read. Acceptance is not readiness; save the asset ID and check status before sharing the current processed URL. You can reupload immediately after deletion. The new asset has a new ID and can reuse the same URL. A pending deletion alone does not prevent reupload. Normal permissions, plan limits, and service availability still apply.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                visibility:
+                  type: string
+                  enum: [public, private]
+                  default: public
+                private_url_expires_in:
+                  type: integer
+                  minimum: 60
+                  maximum: 604800
+                  default: 3600
+                  description: Optional initial private URL lifetime in seconds. Used only when visibility is private.
+                data:
+                  type: string
+                  description: JSON object with up to 5 scalar fields; encoded JSON at most 4096 UTF-8 bytes, trimmed keys at most 64 bytes and string values at most 512 bytes. Send before the file part.
+                  example: '{"external_id":"asset_123","owner_id":"user_456"}'
+                kmp-quality:
+                  type: string
+                  enum: [480p, 720p, 1080p, 4k]
+                  description: Video uploads only.
+                file:
+                  type: string
+                  format: binary
+              required: [file]
+      responses:
+        "200":
+          description: Asset accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadAccepted"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+  /api/upload/{asset_id}/status:
+    get:
+      summary: Get upload status
+      operationId: getUploadStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AssetID"
+      responses:
+        "200":
+          description: Upload status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadStatus"
+        "404":
+          $ref: "#/components/responses/Error"
+  /api/upload/{asset_id}/private-url:
+    post:
+      summary: Generate a private URL
+      operationId: generatePrivateUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AssetID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expires_in:
+                  type: integer
+                  minimum: 60
+                  maximum: 604800
+                  default: 3600
+                variant:
+                  type: string
+                  enum: [webp, avif]
+                  default: webp
+                  description: Variant to sign. Use avif only when the private image asset has an AVIF variant.
+      responses:
+        "200":
+          description: Private URL generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      asset_id:
+                        type: integer
+                      variant:
+                        type: string
+                        enum: [webp, avif]
+                      private_url:
+                        type: string
+                        format: uri
+                        example: https://cdn.kompressr.com/p/660e8400-e29b-41d4-a716-446655440001/images/hash.webp?e=1777464000&s=abc123
+                      expires_at:
+                        type: string
+                        format: date-time
+                      expires_in:
+                        type: integer
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/uploads:
+    get:
+      summary: List uploads
+      operationId: listUploads
+      description: Project/master upload keys list all uploads for the project. User-scoped upload keys list only assets owned by the project user bound to that key.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deletion_status
+          in: query
+          description: Defaults to active; historical deletion filters retain IDs and suppress delivery URLs.
+          schema: {type: string, enum: [active, deleting, deleted, legacy_deleted], default: active}
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: integer
+        - name: visibility
+          in: query
+          schema:
+            type: string
+            enum: [public, private]
+        - name: external_id
+          in: query
+          schema:
+            type: string
+        - name: data.{key}
+          in: query
+          description: Filter by a customer data field, for example data.owner_id=user_456. Up to 5 data filters per request.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Upload list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UploadAsset"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+  /api/platform/project-users:
+    get:
+      summary: List users and agents
+      operationId: platformListProjectUsers
+      description: Lists identities for the project attached to the bearer project key. Returns usage counters from a rollup table, not raw file contents.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+      responses:
+        "200":
+          description: Users and agents.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  project_users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectUser"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  active_count:
+                    type: integer
+                    description: Active identities in this project. Kept for backward compatibility.
+                  project_active_count:
+                    type: integer
+                    description: Active identities in this project.
+                  org_active_count:
+                    type: integer
+                    description: Active identities across all identity-enabled projects in the organization.
+    post:
+      summary: Create or fetch a user or agent
+      operationId: platformCreateProjectUser
+      description: Idempotent by customer_user_id within the authenticated project. Use your stable customer, workspace, tenant, or agent ID.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_user_id]
+              properties:
+                customer_user_id:
+                  type: string
+                  maxLength: 256
+                display_name:
+                  type: string
+                  maxLength: 120
+                metadata:
+                  $ref: "#/components/schemas/CustomerData"
+      responses:
+        "201":
+          description: User or agent created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectUserCreateResponse"
+        "200":
+          description: Existing user or agent returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectUserCreateResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/platform/project-users/{project_user_id}:
+    patch:
+      summary: Update a user or agent
+      operationId: platformUpdateProjectUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectUserID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                  maxLength: 120
+                metadata:
+                  $ref: "#/components/schemas/CustomerData"
+      responses:
+        "200":
+          description: User or agent updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  project_user:
+                    $ref: "#/components/schemas/ProjectUser"
+  /api/platform/project-users/{project_user_id}/suspend:
+    post:
+      summary: Suspend a user or agent
+      operationId: platformSuspendProjectUser
+      description: Revokes active scoped keys without deleting files. Existing files remain stored and continue counting toward storage. Use the project key with DELETE /api/assets/{id} or POST /api/assets/bulk-delete to remove assets; revoked scoped keys cannot delete them.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectUserID"
+      responses:
+        "200":
+          description: User or agent suspended.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectUserMutationResponse"
+  /api/platform/project-users/{project_user_id}/reactivate:
+    post:
+      summary: Reactivate a user or agent
+      operationId: platformReactivateProjectUser
+      description: Reactivates the identity without restoring old revoked keys. Create a new scoped key before upload resumes.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectUserID"
+      responses:
+        "200":
+          description: User or agent reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectUserMutationResponse"
+  /api/platform/project-users/{project_user_id}/upload-keys:
+    get:
+      summary: List scoped upload keys
+      operationId: platformListProjectUserUploadKeys
+      description: Raw API key secrets and key hashes are never returned by list endpoints.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectUserID"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+      responses:
+        "200":
+          description: Scoped upload keys.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  upload_keys:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectUserUploadKey"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+    post:
+      summary: Create a scoped upload key
+      operationId: platformCreateProjectUserUploadKey
+      description: Returns the raw scoped upload key once. Default policy allows upload, status, list, private URLs, public and private files, and all supported file types. Deletion is excluded by default; explicitly include delete in scopes to permit single and bulk deletion for this identity.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectUserID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUserUploadKeyCreate"
+      responses:
+        "201":
+          description: Scoped upload key created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectUserUploadKeyCreateResponse"
+  /api/platform/project-users/{project_user_id}/upload-keys/{key_id}/rotate:
+    post:
+      summary: Rotate scoped upload key
+      operationId: platformRotateProjectUserUploadKey
+      description: Replaces the secret and returns the raw replacement key once.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectUserID"
+        - $ref: "#/components/parameters/UploadKeyID"
+      responses:
+        "200":
+          description: Scoped upload key rotated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectUserUploadKeyCreateResponse"
+  /api/platform/project-users/{project_user_id}/upload-keys/{key_id}/revoke:
+    post:
+      summary: Revoke scoped upload key
+      operationId: platformRevokeProjectUserUploadKey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectUserID"
+        - $ref: "#/components/parameters/UploadKeyID"
+      responses:
+        "200":
+          description: Scoped upload key revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessage"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Browser session cookie. Mutations also require the X-CSRF-Token header and matching CSRF cookie.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Project/master upload keys and user-scoped upload keys. User-scoped keys require the explicit scope for each operation, including opt-in delete, and are restricted to their upload identity, visibility, and asset types.
+  parameters:
+    AssetID:
+      name: asset_id
+      in: path
+      required: true
+      schema:
+        type: integer
+    ProjectID:
+      name: project_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProjectUserID:
+      name: project_user_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UploadKeyID:
+      name: key_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Error:
+      description: Error response.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              error:
+                type: string
+              code:
+                type: string
+  schemas:
+    AssetListResponse:
+      type: object
+      required: [data, page, limit, total]
+      properties:
+        data:
+          type: array
+          description: Lightweight records; delivery/accounting/failure fields are omitted and storage_credited_mb is 0. Use the detail endpoint to resolve those values.
+          items: {$ref: '#/components/schemas/AssetDeletionState'}
+        page: {type: integer, minimum: 1}
+        limit: {type: integer, minimum: 1}
+        total: {type: integer, minimum: 0}
+    AssetBulkDeletionResponse:
+      type: object
+      required: [results, counts]
+      properties:
+        results:
+          type: array
+          minItems: 1
+          maxItems: 100
+          description: One result per unique ID in first-seen order. Inspect accepted for each item, even when the outer response is HTTP 200.
+          items:
+            type: object
+            required: [id, status, accepted]
+            properties:
+              id: {type: integer, format: int64, minimum: 1}
+              status:
+                type: integer
+                description: Per-item HTTP status; 202 accepted, 200 already complete, or an error status (404, 409, 500, 503).
+                enum: [200, 202, 404, 409, 500, 503]
+              accepted: {type: boolean}
+              state: {$ref: '#/components/schemas/AssetDeletionState'}
+              code: {type: string, description: Present for a failed item.}
+              error: {type: string, description: Safe message for a failed item.}
+        counts:
+          type: object
+          required: [total, accepted, failed]
+          properties:
+            total: {type: integer, minimum: 1, maximum: 100, description: Number of unique IDs.}
+            accepted: {type: integer, minimum: 0}
+            failed: {type: integer, minimum: 0}
+    AssetDeletionState:
+      type: object
+      description: Existing asset record; responses are not wrapped in success/data. Historical records remain after file removal, even if a newer asset reuses the URL.
+      required: [id, project_id, kind, deletion_status, processing_status, source, storage_credited_mb]
+      properties:
+        id: {type: integer, format: int64, minimum: 1}
+        project_id: {type: string, format: uuid}
+        kind: {type: integer, description: Existing numeric asset type; 1 is image.}
+        source: {type: string, enum: [upload, origin]}
+        processing_status:
+          type: integer
+          description: Existing processing status, separate from deletion_status; 3 is processed and 6 is deleted. Use deletion_status to follow deletion.
+        deletion_status:
+          type: string
+          enum: [active, deleting, deleted, legacy_deleted]
+          description: Active has no deletion request; deleting is accepted and awaiting file removal; deleted has completed file removal. For legacy_deleted assets, contact support if you need help with deletion.
+        deletion_requested_at:
+          type: string
+          format: date-time
+          description: Present once a permanent deletion request is recorded.
+        delivery_status:
+          type: string
+          deprecated: true
+          enum: [pending, blocked, origin_only]
+          description: Deprecated and no longer returned. Use deletion_status for file removal progress. Cached copies may remain available until the cache is cleared.
+        storage_credited_mb:
+          type: integer
+          minimum: 0
+          description: Recorded storage usage released for this asset, not a cash refund. List entries always return 0; inspect detail for recorded credits. Credits follow physical removal and may lag acceptance; shared originals remain charged until no longer needed.
+        accounting_status:
+          type: string
+          enum: [pending, settled, unavailable]
+          description: Pending means storage credits are being applied; settled means no storage credit is outstanding. Use deletion_status to check whether file removal is complete. Unavailable means this status is temporarily unavailable. Omitted before deletion and in list entries.
+        last_failure:
+          type: object
+          description: Most recent deletion error, when available. Kompressr retries automatically. Omitted when deletion_status is deleted and in list entries.
+          required: [code, message, at]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            at: {type: string, format: date-time}
+
+    SuccessMessage:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    ProjectCapabilities:
+      type: object
+      properties:
+        url_prepend:
+          type: boolean
+        uploads:
+          type: boolean
+        private_assets:
+          type: boolean
+        mcp_uploads:
+          type: boolean
+        user_scoped_upload_keys:
+          type: boolean
+        analytics:
+          type: boolean
+      additionalProperties:
+        type: boolean
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        domain_name:
+          type: string
+          description: Empty for non-URL Prepend projects.
+        status:
+          type: integer
+        is_upload:
+          type: boolean
+        capabilities:
+          $ref: "#/components/schemas/ProjectCapabilities"
+        created_at:
+          type: string
+          format: date-time
+    ProjectCreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        project:
+          $ref: "#/components/schemas/Project"
+        verification:
+          type: object
+          description: Present only for URL Prepend projects.
+          properties:
+            txt_record:
+              type: string
+            txt_value:
+              type: string
+            setup_url:
+              type: string
+    ProjectUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        customer_user_id:
+          type: string
+          maxLength: 256
+        display_name:
+          type: string
+          maxLength: 120
+        status:
+          type: string
+          enum: [active, suspended]
+        metadata:
+          $ref: "#/components/schemas/CustomerData"
+        last_seen_at:
+          type: string
+          format: date-time
+        asset_count:
+          type: integer
+          description: Count of non-deleted uploads owned by this identity.
+        storage_bytes:
+          type: integer
+          description: Rollup of original and optimized storage bytes owned by this identity.
+        active_key_count:
+          type: integer
+          description: Number of non-revoked, non-expired scoped upload keys for this identity.
+        last_upload_at:
+          type: string
+          format: date-time
+        last_key_used_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    ProjectUserCreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        created:
+          type: boolean
+          description: False when the identity already existed for this project.
+        project_user:
+          $ref: "#/components/schemas/ProjectUser"
+    ProjectUserMutationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        project_user:
+          $ref: "#/components/schemas/ProjectUser"
+    ProjectUserUploadKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        project_user_id:
+          type: string
+          format: uuid
+        key_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 120
+        scopes:
+          type: array
+          items:
+            type: string
+            enum: [upload, status, list, private_url, delete]
+        allowed_visibility:
+          type: string
+          enum: [public, private, both]
+        allowed_asset_types:
+          type: array
+          description: Empty or omitted means all supported asset types.
+          items:
+            type: integer
+        expires_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    ProjectUserUploadKeyCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          description: Human-readable label for your team.
+        scopes:
+          type: array
+          description: Omit for the non-destructive default. To also permit single and bulk deletion, pass [upload, status, list, private_url, delete]. Providing scopes replaces the default list.
+          default: [upload, status, list, private_url]
+          items:
+            type: string
+            enum: [upload, status, list, private_url, delete]
+        allowed_visibility:
+          type: string
+          description: Optional advanced policy. Omit for public and private uploads.
+          enum: [public, private, both]
+          default: both
+        allowed_asset_types:
+          type: array
+          description: Optional advanced policy. Empty or omitted means all supported asset types.
+          items:
+            type: integer
+        expires_at:
+          type: string
+          format: date-time
+    ProjectUserUploadKeyCreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        key_id:
+          type: string
+          format: uuid
+        api_key:
+          type: string
+          description: Raw scoped upload key. Returned only on create/rotate.
+        upload_key:
+          $ref: "#/components/schemas/ProjectUserUploadKey"
+    CustomerData:
+      description: Up to five scalar values; trimmed keys max 64 UTF-8 bytes, strings max 512 bytes. Multipart encoded JSON is limited to 4096 bytes; the shared/platform JSON parser allows 8192 bytes.
+      type: object
+      maxProperties: 5
+      additionalProperties:
+        oneOf:
+          - type: string
+            maxLength: 512
+          - type: number
+          - type: boolean
+          - type: "null"
+    UploadAccepted:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [asset_id, status, visibility, deletion_status, original_name, original_size, asset_type]
+          properties:
+            asset_id:
+              type: integer
+            status:
+              type: string
+            deletion_status:
+              type: string
+              enum: [active, deleting, deleted, legacy_deleted]
+            deletion_requested_at:
+              type: string
+              format: date-time
+            visibility:
+              type: string
+              enum: [public, private]
+            cdn_url:
+              type: string
+              format: uri
+            cdn_url_avif:
+              type: string
+              format: uri
+              description: Public AVIF URL when an AVIF variant exists.
+            private_url:
+              type: string
+              format: uri
+              description: Present only for private uploads when an expiring URL was requested.
+              example: https://cdn.kompressr.com/p/660e8400-e29b-41d4-a716-446655440001/images/hash.webp?e=1777464000&s=abc123
+            private_url_expires_at:
+              type: string
+              format: date-time
+            data:
+              $ref: "#/components/schemas/CustomerData"
+            external_id:
+              type: string
+            original_name:
+              type: string
+            original_size:
+              type: integer
+            asset_type:
+              type: string
+            options:
+              type: object
+              additionalProperties:
+                type: string
+    UploadStatus:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/UploadAsset"
+    UploadAsset:
+      type: object
+      required: [id, status, visibility, deletion_status, original_size, asset_type, kompressd_size, savings_percent, can_generate_private_url]
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+        deletion_status:
+          type: string
+          enum: [active, deleting, deleted, legacy_deleted]
+        deletion_requested_at:
+          type: string
+          format: date-time
+        visibility:
+          type: string
+          enum: [public, private]
+        cdn_url:
+          type: string
+          format: uri
+        cdn_url_avif:
+          type: string
+          format: uri
+          description: Public AVIF URL when an AVIF variant exists.
+        original_name:
+          type: string
+          description: Optional upload filename. Existing records may omit empty or unavailable names.
+        original_size:
+          type: integer
+        kompressd_size:
+          type: integer
+        savings_percent:
+          type: number
+        asset_type:
+          type: string
+        input_format:
+          type: string
+        output_format:
+          type: string
+        data:
+          $ref: "#/components/schemas/CustomerData"
+        external_id:
+          type: string
+        options:
+          type: object
+          additionalProperties:
+            type: string
+        can_generate_private_url:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time

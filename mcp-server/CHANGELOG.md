@@ -1,0 +1,14 @@
+# Changelog
+
+## 2.0.0
+
+- Use `@kompressr/sdk` for file operations and require Node.js 22.12+.
+- Add readiness waiting, deletion/progress tools, pagination/filtering and structured results.
+- Support separate management/upload origins with production defaults and explicit custom overrides.
+- Stream local/remote files with destination, DNS and redirect validation; private/local remote sources require an explicit hostname allowlist.
+- Propagate cancellation and disconnection through download/upload; clean temporary files and preserve ambiguous write outcomes.
+- Improve credential persistence, response validation, optional filename handling and packed-package verification.
+
+### Migration from 1.x
+
+Upgrade Node.js, review the configuration in README.md and wait for readiness before sharing a delivery URL. Scoped keys exclude deletion by default. SDK publication must precede an MCP release depending on it.

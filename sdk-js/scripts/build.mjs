@@ -1,0 +1,10 @@
+import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+const require = createRequire(import.meta.url);
+const compiler = require.resolve('typescript/bin/tsc');
+rmSync('dist', { recursive: true, force: true });
+execFileSync(process.execPath, [compiler, '-p', 'tsconfig.json'], { stdio: 'inherit' });
+execFileSync(process.execPath, [compiler, '-p', 'tsconfig.json', '--module', 'CommonJS', '--moduleResolution', 'Node', '--outDir', 'dist/cjs'], { stdio: 'inherit' });
+mkdirSync('dist/cjs', { recursive: true });
+writeFileSync('dist/cjs/package.json', JSON.stringify({ type: 'commonjs' }) + '\n');
