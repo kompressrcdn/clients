@@ -2,6 +2,8 @@
 
 ## 2.0.0
 
+- Accept ordinary public IPv4 download sources outside the protocol/documentation blocks while preserving DNS and redirect protections.
+
 - Use `@kompressr/sdk` for file operations and require Node.js 22.12+.
 - Add readiness waiting, deletion/progress tools, pagination/filtering and structured results.
 - Support separate management/upload origins with production defaults and explicit custom overrides.

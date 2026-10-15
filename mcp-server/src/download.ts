@@ -17,11 +17,13 @@ import { KompressrError } from '@kompressr/sdk';
 const globalIPv6 = new BlockList(); globalIPv6.addSubnet('2000::', 3, 'ipv6');
 const excludedIPv6 = new BlockList();
 for (const [address, prefix] of [['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['3fff::', 20]] as const) excludedIPv6.addSubnet(address, prefix, 'ipv6');
+// Protocol assignments and TEST-NET-1 are distinct /24 blocks; ordinary
+// public addresses elsewhere in 192.0.0.0/16 remain eligible.
 const excludedIPv4 = new BlockList();
 for (const [address, prefix] of [
   ['0.0.0.0', 8], ['10.0.0.0', 8], ['127.0.0.0', 8], ['224.0.0.0', 3],
   ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.168.0.0', 16],
-  ['100.64.0.0', 10], ['192.0.0.0', 16], ['198.18.0.0', 15],
+  ['100.64.0.0', 10], ['192.0.0.0', 24], ['192.0.2.0', 24], ['198.18.0.0', 15],
   ['198.51.100.0', 24], ['203.0.113.0', 24],
 ] as const) excludedIPv4.addSubnet(address, prefix, 'ipv4');
 export function isPublicAddress(address: string): boolean {

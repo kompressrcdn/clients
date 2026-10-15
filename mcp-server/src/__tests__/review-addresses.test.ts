@@ -56,3 +56,35 @@ it('retains explicit trusted-host exceptions for special-address sources', async
   const download = await downloadForUpload('https://source.example/fixture.png'); await download.cleanup();
   expect(state.connected).toEqual(['source.example']);
 });
+
+// These numeric policy fixtures never connect to the supplied IP addresses.
+it.each(['192.0.1.0', '192.0.1.255', '192.0.3.0', '192.0.78.24', '192.0.80.1', '192.0.255.255'])('permits ordinary public IPv4 outside the special /24 blocks: %s', address => {
+  expect(isPublicAddress(address)).toBe(true);
+});
+it.each(['192.0.0.0', '192.0.0.255', '192.0.2.0', '192.0.2.255', '192.168.0.1', '10.0.0.1', '169.254.169.254'])('retains special/private IPv4 exclusions: %s', address => {
+  expect(isPublicAddress(address)).toBe(false);
+});
+it.each(['192.0.78.24', '192.0.80.1'])('accepts an eligible public IPv4 DNS answer: %s', async address => {
+  state.addresses.set('source.example', [{ address, family: 4 }]);
+  const download = await downloadForUpload('https://source.example/fixture.png');
+  try { expect(state.connected).toEqual(['source.example']); } finally { await download.cleanup(); }
+});
+it.each(['192.0.0.1', '192.0.2.1', '192.168.0.1'])('rejects excluded IPv4 DNS answers, including mixed answers: %s', async address => {
+  state.addresses.set('source.example', [{ address: '192.0.78.24', family: 4 }, { address, family: 4 }]);
+  await expect(downloadForUpload('https://source.example/fixture.png')).rejects.toMatchObject({ code: 'REMOTE_DOWNLOAD_FAILED' });
+  expect(state.connected).toEqual([]);
+});
+it.each(['192.0.0.1', '192.0.2.1', '192.168.0.1'])('rechecks excluded IPv4 at a redirect destination: %s', async address => {
+  state.addresses.set('source.example', [{ address: '192.0.78.24', family: 4 }]);
+  state.addresses.set('redirect.example', [{ address, family: 4 }]);
+  state.redirects.set('source.example', 'https://redirect.example/fixture.png');
+  await expect(downloadForUpload('https://source.example/fixture.png')).rejects.toMatchObject({ code: 'REMOTE_DOWNLOAD_FAILED' });
+  expect(state.connected).toEqual(['source.example']);
+});
+it('accepts an eligible IPv4 redirect after validating its destination', async () => {
+  state.addresses.set('source.example', [{ address: '192.0.78.24', family: 4 }]);
+  state.addresses.set('redirect.example', [{ address: '192.0.80.1', family: 4 }]);
+  state.redirects.set('source.example', 'https://redirect.example/fixture.png');
+  const download = await downloadForUpload('https://source.example/fixture.png');
+  try { expect(state.connected).toEqual(['source.example', 'redirect.example']); } finally { await download.cleanup(); }
+});
