@@ -7,7 +7,13 @@ Official libraries and agent tools for storing, optimizing and delivering files 
 | `@kompressr/sdk` | JavaScript and TypeScript applications on Node.js | [Quick start](sdk-js/README.md), [API reference](sdk-js/API.md), [examples](sdk-js/examples) |
 | `@kompressr/mcp-server` | MCP clients and AI agents | [Setup and tools](mcp-server/README.md) |
 
-Current release candidates: SDK **1.0.0**, MCP **2.0.0**. Registry installation requires those versions to be published. Each package has its own version and changelog. Node.js 22.12+ and 24 are supported.
+Published releases: SDK **1.0.0**, MCP **2.0.0**. Both are available on npm under `latest`. Each package has its own version and changelog. Node.js 22.12+ and 24 are supported.
+
+## Choose your starting point
+
+- **Upload from your Node.js application:** [run your first private upload](guides/private-upload.md), including setup, expected output and timeout recovery.
+- **Use Claude Desktop or another agent:** [install the MCP extension](smithery/README.md) and try the sample upload prompt.
+- **Build a chatbot with separate users:** [test scoped access, then integrate it](guides/chatbot-integration.md).
 
 ## Start with the SDK
 
@@ -23,7 +29,7 @@ npm install @kompressr/sdk
 import { KompressrClient } from '@kompressr/sdk';
 
 const files = new KompressrClient({ apiKey: process.env.KOMPRESSR_API_KEY });
-const accepted = await files.uploadFile('./image.png');
+const accepted = await files.uploadFile('./image.png', { visibility: 'public' });
 // Save accepted.id in your application before waiting, so a timeout does not lose the upload.
 const ready = await files.waitUntilReady(accepted.id);
 console.log(ready.cdn_url);
@@ -31,9 +37,15 @@ console.log(ready.cdn_url);
 
 An accepted upload can still be processing. Save its ID and wait for readiness before sharing a delivery URL. See the [SDK guide](sdk-js/README.md) for private files, deletion, errors and scoped keys. Keep project/master credentials on trusted backends.
 
+## Build a chatbot with separate user access
+
+Follow the [chatbot integration guide](guides/chatbot-integration.md) to provision identities and scoped keys, bind tools to authenticated users, upload private attachments, wait for processing and refresh delivery links. Start with a runnable test, then follow the linked production reference for credential storage, conversation access and recovery.
+
+Ordinary API uploads are included on paid plans, subject to file and usage limits. Per-user scoped keys require a Platform/AI project and a plan that includes them: currently Growth, API or Enterprise. Check the [plan comparison](https://kompressr.com/pricing#file-support).
+
 ## Connect an agent
 
-Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.0` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly.
+Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.0` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [Smithery installation walkthrough](smithery/README.md). Maintainers can use the separate [bundle publishing guide](smithery/PUBLISHING.md).
 
 ## Develop from source
 

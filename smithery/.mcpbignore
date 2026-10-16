@@ -1,0 +1,9 @@
+.env*
+.kompressr/
+*.tgz
+*.mcpb
+coverage/
+.mcpbignore
+**/test/**
+**/tests/**
+**/__tests__/**

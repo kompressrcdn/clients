@@ -1,0 +1,109 @@
+{
+  "manifest_version": "0.3",
+  "name": "kompressr",
+  "display_name": "Kompressr",
+  "version": "2.0.0",
+  "description": "Upload, optimize, manage and deliver files with Kompressr.",
+  "long_description": "Upload local files or public file URLs, wait for processing, list uploads, generate expiring private links and permanently delete explicit assets. Requires a Kompressr account with paid API upload access and your own project or scoped API key. The server runs on the MCP client's machine and can read files allowed by that process's operating-system permissions; it does not enforce a directory allowlist. URL uploads download to temporary local storage before uploading to Kompressr. Supply a project UUID to enable upload listing. Account setup tools cannot replace an already configured runtime.",
+  "author": {
+    "name": "Kompressr",
+    "url": "https://kompressr.com"
+  },
+  "license": "MIT",
+  "homepage": "https://kompressr.com/agents",
+  "documentation": "https://github.com/kompressrcdn/clients/blob/main/mcp-server/README.md",
+  "support": "https://github.com/kompressrcdn/clients/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kompressrcdn/clients"
+  },
+  "privacy_policies": [
+    "https://kompressr.com/privacy"
+  ],
+  "keywords": [
+    "kompressr",
+    "uploads",
+    "cdn",
+    "assets",
+    "optimization"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
+      "env": {
+        "KOMPRESSR_API_KEY": "${user_config.api_key}",
+        "KOMPRESSR_PROJECT_ID": "${user_config.project_id}",
+        "KOMPRESSR_API_URL": "https://kompressr.com",
+        "KOMPRESSR_UPLOAD_BASE_URL": "https://uploads.kompressr.com"
+      }
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "node": ">=22.12.0"
+    }
+  },
+  "user_config": {
+    "api_key": {
+      "type": "string",
+      "title": "Kompressr API key",
+      "description": "Your project or scoped API key. Use a scoped key for an individual agent.",
+      "required": true,
+      "sensitive": true
+    },
+    "project_id": {
+      "type": "string",
+      "title": "Project ID",
+      "description": "Project UUID. Required for listing uploads; other file operations need only the API key.",
+      "required": false,
+      "default": ""
+    }
+  },
+  "tools": [
+    {
+      "name": "register",
+      "description": "Create an account and send a verification email. API uploads require a paid plan. Cannot replace an already configured runtime."
+    },
+    {
+      "name": "verify_email",
+      "description": "Verify an email token and save credentials locally. Refuses to replace an already configured runtime."
+    },
+    {
+      "name": "upload_asset",
+      "description": "Upload a supported image, video, PDF, font or text asset. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. API uploads require a paid plan."
+    },
+    {
+      "name": "get_asset_status",
+      "description": "Inspect processing status and delivery information. Scoped keys only read uploads owned by their identity. A URL is ready only for active processed assets."
+    },
+    {
+      "name": "list_assets",
+      "description": "List uploaded files in the configured project, with pagination and processing/deletion filters. A scoped key lists only its identity uploads. KOMPRESSR_PROJECT_ID is required."
+    },
+    {
+      "name": "generate_private_url",
+      "description": "Generate a fresh expiring URL after private upload processing and application access checks. Scoped keys only sign their own identity private uploads. Expiry does not delete the asset."
+    },
+    {
+      "name": "wait_for_asset",
+      "description": "Wait within a bounded time budget for an active upload to process. A timeout preserves the asset ID; resume rather than reupload. Private uploads need generate_private_url after readiness."
+    },
+    {
+      "name": "get_asset_deletion_status",
+      "description": "Inspect processing/deletion state and storage credits for an asset ID. File removal completion does not certify that all caches have cleared."
+    },
+    {
+      "name": "delete_asset",
+      "description": "Permanently delete one explicit asset ID. Irreversible; no restore or cancellation. Scoped keys need explicit delete permission. Acceptance starts background cleanup; cached/offline copies may remain."
+    },
+    {
+      "name": "bulk_delete_assets",
+      "description": "Permanently delete 1–100 explicit asset IDs. Inspect each result: a successful HTTP request can contain failed items. Scoped keys require delete permission. No query-based deletion or undo."
+    }
+  ]
+}
