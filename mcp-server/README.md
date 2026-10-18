@@ -2,7 +2,7 @@
 
 Kompressr tools for MCP agents: upload files, wait for processing, generate private links, paginate uploads and permanently delete explicit asset IDs. File operations use the separate `@kompressr/sdk` package. Applications can use that SDK directly without starting MCP.
 
-Node.js 22.12+ and 24 are supported.
+Requires Node.js 22 or later.
 
 ## Setup
 
@@ -15,7 +15,7 @@ Configure an MCP client to run the package:
   "mcpServers": {
     "kompressr": {
       "command": "npx",
-      "args": ["-y", "@kompressr/mcp-server@2.0.0"],
+      "args": ["-y", "@kompressr/mcp-server@2.0.1"],
       "env": {
         "KOMPRESSR_API_KEY": "YOUR_PROJECT_OR_SCOPED_KEY",
         "KOMPRESSR_PROJECT_ID": "YOUR_PROJECT_UUID"
@@ -25,7 +25,7 @@ Configure an MCP client to run the package:
 }
 ```
 
-`KOMPRESSR_PROJECT_ID` is required for upload listing; upload/status/signing/deletion need only the key. For source builds before publication, follow [CONTRIBUTING.md](https://github.com/kompressrcdn/clients/blob/main/CONTRIBUTING.md), then configure `node` with the absolute path to this package's built `dist/index.js`.
+`KOMPRESSR_PROJECT_ID` is required for upload listing; upload/status/signing/deletion need only the key. For source builds, follow [CONTRIBUTING.md](https://github.com/kompressrcdn/clients/blob/main/CONTRIBUTING.md), then configure `node` with the absolute path to this package's built `dist/index.js`.
 
 ## Configuration and migration
 
@@ -92,4 +92,4 @@ Safe GET requests retry network/429/502/503/504 failures at most twice within a 
 
 `file_url` downloads on the MCP machine, then uploads a local temporary file. MCP cancellation/disconnection, including stdin EOF, aborts the transfer and is checked again before starting the upload. Before dispatch no asset is created; after dispatch a server-accepted upload cannot be rolled back by client cancellation. It streams to disk with a 2 GiB transport ceiling, five-minute download deadline and at most five redirects. HTTPS cannot downgrade to HTTP. Numeric CIDR checks admit ordinary global IPv6 unicast and conservatively exclude IETF protocol, transition and documentation ranges, including their compressed forms. Each destination resolves to validated allowed addresses used for the connection; private/local destinations require exact hostnames in `KOMPRESSR_REMOTE_ALLOWED_HOSTS`. Redirect targets are checked again. Sources use no Kompressr credentials. Temporary files are restricted and cleaned up on success/failure. The transport ceiling does not override your plan or disk capacity; remote download and upload have separate deadlines. Server-side URL import is not part of this SDK/MCP integration.
 
-See [CHANGELOG.md](CHANGELOG.md) and the [release guide](RELEASING.md). Local HTTP/protocol checks do not certify deployed authentication, processing or CDN behavior. The source verification commands use local fixtures and do not publish packages.
+See [CHANGELOG.md](https://github.com/kompressrcdn/clients/blob/main/mcp-server/CHANGELOG.md) and the [release guide](https://github.com/kompressrcdn/clients/blob/main/mcp-server/RELEASING.md). Local HTTP/protocol checks do not certify deployed authentication, processing or CDN behavior. The source verification commands use local fixtures and do not publish packages.

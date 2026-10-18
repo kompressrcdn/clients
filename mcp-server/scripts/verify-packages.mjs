@@ -21,7 +21,11 @@ async function endpoint(handler) {
   return `http://127.0.0.1:${server.address().port}`;
 }
 try {
-  const pack=cwd=>JSON.parse(execFileSync('npm',['pack','--json','--pack-destination',directory],{cwd,encoding:'utf8'}))[0];
+  const pack = cwd => {
+    // npm 10 mixes lifecycle messages with --json stdout unless separated.
+    execFileSync('npm', ['run', 'build'], { cwd, stdio: 'inherit' });
+    return JSON.parse(execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', directory], { cwd, encoding: 'utf8' }))[0];
+  };
   const sdkPack=pack(sdk),mcpPack=pack(root); assert.equal(sdkPack.version,manifest.dependencies['@kompressr/sdk']);
   const repositoryRoot=fileURLToPath(new URL('../../', import.meta.url));
   checkPackedFiles(sdkPack.files,sdk,repositoryRoot);

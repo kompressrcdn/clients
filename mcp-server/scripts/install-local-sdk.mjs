@@ -15,7 +15,9 @@ if (source.name !== '@kompressr/sdk' || source.version !== manifest.dependencies
 // npm ci preserves every other locked version and never edits checked-in metadata.
 const directory = mkdtempSync(join(root, '.local-sdk-install-'));
 try {
-  const output = execFileSync('npm', ['pack', '--json', '--pack-destination', directory], { cwd: sdk, encoding: 'utf8' });
+  // Keep lifecycle output out of npm 10's JSON metadata.
+  execFileSync('npm', ['run', 'build'], { cwd: sdk, stdio: 'inherit' });
+  const output = execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', directory], { cwd: sdk, encoding: 'utf8' });
   const [packed] = JSON.parse(output);
   const artifact = `file:${join(directory, packed.filename)}`;
   manifest.dependencies['@kompressr/sdk'] = artifact;

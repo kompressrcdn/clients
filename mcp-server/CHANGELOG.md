@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+- Support Node.js 22.0 and later, including the Smithery bundle.
+- Pin SDK 1.0.1, which rejects explicitly empty scopes when creating upload keys. MCP tools and configuration are unchanged.
+
 ## 2.0.0
 
 - Accept ordinary public IPv4 download sources outside the protocol/documentation blocks while preserving DNS and redirect protections.
