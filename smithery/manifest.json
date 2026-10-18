@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "kompressr",
   "display_name": "Kompressr",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Upload, optimize, manage and deliver files with Kompressr.",
   "long_description": "Upload local files or public file URLs, wait for processing, list uploads, generate expiring private links and permanently delete explicit assets. Requires a Kompressr account with paid API upload access and your own project or scoped API key. The server runs on the MCP client's machine and can read files allowed by that process's operating-system permissions; it does not enforce a directory allowlist. URL uploads download to temporary local storage before uploading to Kompressr. Supply a project UUID to enable upload listing. Account setup tools cannot replace an already configured runtime.",
   "author": {
@@ -45,7 +45,7 @@
   },
   "compatibility": {
     "runtimes": {
-      "node": ">=22.12.0"
+      "node": ">=22.0.0"
     }
   },
   "user_config": {

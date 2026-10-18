@@ -8,13 +8,13 @@ The [kompressr/kompressr listing](https://smithery.ai/servers/kompressr/kompress
 
 - A Kompressr account with a paid plan and an API key from **Dashboard → Projects → API Keys**. For an individual agent, you can use a [scoped key](../guides/chatbot-integration.md#1-create-a-test-user) instead.
 - The UUID of the **same project as the key**, shown on its API Keys page. Listing requires it; upload, status and signing do not.
-- A current Claude Desktop installation. This bundle requires Node.js **22.12+**. Claude Desktop supplies a Node runtime; for another client that does not, install Node.js 22.12+ or 24.
+- A current Claude Desktop installation. This bundle requires Node.js **22+**. Claude Desktop supplies a Node runtime; for another client that does not, install Node.js 22 or later.
 
 ## Install in a desktop client
 
 The following walkthrough uses **Claude Desktop**. It follows Anthropic's [custom desktop extension instructions](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop).
 
-1. [Download the Kompressr bundle](https://api.smithery.ai/servers/kompressr%2Fkompressr/download). Save it with a `.mcpb` extension, for example `kompressr-2.0.0.mcpb`.
+1. [Download the Kompressr bundle](https://api.smithery.ai/servers/kompressr%2Fkompressr/download). Save it with a `.mcpb` extension, for example `kompressr-2.0.1.mcpb`.
 2. In Claude Desktop, open **Settings → Extensions → Advanced settings**. Under **Extension Developer**, choose **Install Extension…**, then select the downloaded file.
 3. Review the installation prompt. Enter the full key in **Kompressr API key** and the matching UUID in **Project ID**. These are extension settings; do not paste the key into a conversation.
 4. Finish installation. In a new chat, choose **+ → Connectors** and find Kompressr. Check that its ten tools are available, including `upload_asset`, `wait_for_asset` and `generate_private_url`.
@@ -36,7 +36,7 @@ Next, ask: “List my Kompressr uploads.” You should see the file you just upl
 | Symptom | Check |
 | --- | --- |
 | Installed, but tools are missing | Restart Claude Desktop, check the extension configuration and inspect its connection logs. |
-| Runtime fails to start | Check the Node version selected by the client meets 22.12+. Updating a separate terminal's Node does not necessarily update the desktop runtime. |
+| Runtime fails to start | Check the Node version selected by the client meets 22+. Updating a separate terminal's Node does not necessarily update the desktop runtime. |
 | File cannot be read | Use an existing absolute path on the machine running MCP and allow the necessary OS file access. A file attached to a remote chat is not automatically a local path. |
 | Upload or signing denied | Check the plan, key scopes, allowed visibility and identity/key status. Reinstalling does not grant permissions. |
 | Wait times out | Keep the asset ID and call `wait_for_asset` again. Do not upload the same file again just to wait longer. |

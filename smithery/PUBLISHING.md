@@ -9,23 +9,34 @@ Run from the repository root using the manifest and MCP lockfile for the release
 ```sh
 KOMPRESSR_SMITHERY_DIR="$(mktemp -d)"
 mkdir "$KOMPRESSR_SMITHERY_DIR/bundle"
-npm pack @kompressr/mcp-server@2.0.0 --ignore-scripts --pack-destination "$KOMPRESSR_SMITHERY_DIR"
-tar -xzf "$KOMPRESSR_SMITHERY_DIR/kompressr-mcp-server-2.0.0.tgz" -C "$KOMPRESSR_SMITHERY_DIR/bundle" --strip-components=1
+npm pack @kompressr/mcp-server@2.0.1 --ignore-scripts --pack-destination "$KOMPRESSR_SMITHERY_DIR"
+tar -xzf "$KOMPRESSR_SMITHERY_DIR/kompressr-mcp-server-2.0.1.tgz" -C "$KOMPRESSR_SMITHERY_DIR/bundle" --strip-components=1
 cp mcp-server/package-lock.json "$KOMPRESSR_SMITHERY_DIR/bundle/package-lock.json"
 npm --prefix "$KOMPRESSR_SMITHERY_DIR/bundle" ci --omit=dev --ignore-scripts
 cp smithery/manifest.json smithery/.mcpbignore "$KOMPRESSR_SMITHERY_DIR/bundle/"
 npx --yes @anthropic-ai/mcpb@2.1.2 validate "$KOMPRESSR_SMITHERY_DIR/bundle/manifest.json"
-npx --yes @anthropic-ai/mcpb@2.1.2 pack "$KOMPRESSR_SMITHERY_DIR/bundle" "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.0.mcpb"
-sha256sum "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.0.mcpb"
+npx --yes @anthropic-ai/mcpb@2.1.2 pack "$KOMPRESSR_SMITHERY_DIR/bundle" "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.1.mcpb"
+sha256sum "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.1.mcpb"
 ```
 
 For future releases, update the package version, matching lockfile, manifest version/tool metadata and output filename together. Keep the npm and bundle versions aligned. Preserve third-party licenses. Do not pack the source checkout or include development tooling. The ignore file excludes dependency tests, local configuration and nested artifacts; MCPB also excludes lockfiles and TypeScript declarations during packing.
 
 ## Verify the archive
 
+Extract the built bundle into an empty directory and run the protocol/metadata check:
+
+```sh
+mkdir "$KOMPRESSR_SMITHERY_DIR/inspect"
+unzip -q "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.1.mcpb" -d "$KOMPRESSR_SMITHERY_DIR/inspect"
+node smithery/verify.mjs "$KOMPRESSR_SMITHERY_DIR/inspect"
+node smithery/publish.mjs "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.1.mcpb" kompressr/kompressr --check
+```
+
+The verifier initializes the extracted server over stdio and compares its version and all ten full tool schemas with the release payload and manifest. It uses a synthetic key, makes no Kompressr API requests and does not publish. Run it across the Node versions configured in CI, including Node 22.0.0. A schema mismatch requires regenerating the payload from the reviewed runtime before publication.
+
 Extract the final `.mcpb` into a new directory and inspect every archived file. Confirm runtime files match the reviewed npm artifacts. Scan dependency files too: secret scanners may skip `node_modules` by default. Review dependency audit results and retain licenses. Compare the bundled dependency versions with the MCP lockfile.
 
-Validate the manifest and its resolved launch configuration: required API key, optional empty project ID, sensitive-field handling, absolute entry point and production origins. Start the extracted runtime from a different working directory on Node 22 and 24. Confirm server name `kompressr`, the intended version and all ten tools with correct annotations.
+Validate the manifest and its resolved launch configuration: required API key, optional empty project ID, sensitive-field handling, absolute entry point and production origins. Start the extracted runtime from a different working directory across the supported Node matrix. Confirm server name `kompressr`, the intended version and all ten tools with correct annotations.
 
 Exercise local and URL uploads, multipart options, acceptance/readiness, private signing, listing/pagination, single and mixed bulk deletion, permission errors, request cancellation and temporary-file cleanup through real stdio and local HTTP fixtures. These fixtures verify package integration, not a deployed service.
 
@@ -42,8 +53,8 @@ Regenerate the release payload from the exact runtime's initialization and `tool
 ```sh
 npx --yes smithery@1.2.0 auth login
 npx --yes smithery@1.2.0 namespace list
-node smithery/publish.mjs "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.0.mcpb" kompressr/kompressr --check
-node smithery/publish.mjs "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.0.mcpb" kompressr/kompressr
+node smithery/publish.mjs "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.1.mcpb" kompressr/kompressr --check
+node smithery/publish.mjs "$KOMPRESSR_SMITHERY_DIR/kompressr-2.0.1.mcpb" kompressr/kompressr
 ```
 
 Use a namespace owned by the publishing account. Check the resulting listing, metadata, configuration fields, version and downloadable artifact. Compare the downloaded archive with the artifact you tested. Complete the listing's Settings → Verification checklist when available; publication alone does not establish official-vendor verification.
