@@ -1,0 +1,65 @@
+{
+  "projectId": "660e8400-e29b-41d4-a716-446655440001",
+  "accepted": {
+    "asset_id": 42,
+    "status": "processing",
+    "visibility": "public",
+    "deletion_status": "active",
+    "original_name": "output.png",
+    "original_size": 1024,
+    "asset_type": "image",
+    "cdn_url": "https://cdn.example/accepted.webp"
+  },
+  "processed": {
+    "asset_id": 42,
+    "status": "processed",
+    "visibility": "public",
+    "deletion_status": "active",
+    "original_name": "output.png",
+    "original_size": 1024,
+    "asset_type": "image",
+    "cdn_url": "https://cdn.example/ready.webp",
+    "id": 42,
+    "kompressd_size": 512,
+    "savings_percent": 50,
+    "can_generate_private_url": false
+  },
+  "deletionAccepted": {
+    "id": 42,
+    "project_id": "660e8400-e29b-41d4-a716-446655440001",
+    "kind": 1,
+    "source": "upload",
+    "processing_status": 3,
+    "deletion_status": "deleting",
+    "storage_credited_mb": 0
+  },
+  "bulkDeletion": {
+    "results": [
+      {
+        "id": 42,
+        "status": 202,
+        "accepted": true,
+        "state": {
+          "id": 42,
+          "project_id": "660e8400-e29b-41d4-a716-446655440001",
+          "kind": 1,
+          "source": "upload",
+          "processing_status": 3,
+          "deletion_status": "deleting",
+          "storage_credited_mb": 0
+        }
+      },
+      {
+        "id": 43,
+        "status": 404,
+        "accepted": false,
+        "error": "Not found"
+      }
+    ],
+    "counts": {
+      "total": 2,
+      "accepted": 1,
+      "failed": 1
+    }
+  }
+}

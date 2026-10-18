@@ -1,0 +1,40 @@
+{
+  "name": "kompressr/sdk",
+  "description": "Kompressr file storage, optimization and platform administration SDK",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": "^8.1",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Kompressr\\": "src/"
+    }
+  },
+  "scripts": {
+    "test": "@php tests/run.php",
+    "verify": "@php scripts/verify.php"
+  },
+  "archive": {
+    "exclude": [
+      "/vendor",
+      "/dist",
+      "/.git",
+      "/composer.lock"
+    ]
+  },
+  "homepage": "https://kompressr.com/developers",
+  "support": {
+    "issues": "https://github.com/kompressrcdn/clients/issues",
+    "source": "https://github.com/kompressrcdn/clients/tree/main/sdk-php"
+  },
+  "keywords": [
+    "kompressr",
+    "storage",
+    "cdn",
+    "uploads",
+    "sdk"
+  ]
+}
