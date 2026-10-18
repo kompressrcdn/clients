@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework Condition="'$(KompressrTestFramework)' == ''">net8.0</TargetFramework>
+    <TargetFramework Condition="'$(KompressrTestFramework)' != ''">$(KompressrTestFramework)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../src/Kompressr.Sdk/Kompressr.Sdk.csproj" /></ItemGroup>
+</Project>

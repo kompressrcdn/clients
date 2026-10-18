@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PackageId>Kompressr.Sdk</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Kompressr</Authors>
+    <Description>Async .NET client for Kompressr uploads, delivery, asset lifecycle and scoped identities.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://kompressr.com/developers</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kompressrcdn/clients</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>kompressr;storage;cdn;uploads;sdk</PackageTags>
+    <Deterministic>true</Deterministic>
+    <DebugType>none</DebugType>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <EnableSourceLink>false</EnableSourceLink>
+    <PathMap>$(MSBuildProjectDirectory)=/src/Kompressr.Sdk</PathMap>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <None Include="../../API.md" Pack="true" PackagePath="/" />
+    <None Include="../../PARITY.md" Pack="true" PackagePath="/" />
+    <None Include="../../CHANGELOG.md" Pack="true" PackagePath="/" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="/" />
+    <None Include="../../CONTRIBUTING.md" Pack="true" PackagePath="/" />
+    <None Include="../../PUBLISHING.md" Pack="true" PackagePath="/" />
+    <None Include="../../examples/Program.cs" Pack="true" PackagePath="examples/" />
+  </ItemGroup>
+</Project>
