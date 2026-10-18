@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Support Node.js 22.0 and later.
+- Reject explicitly empty scoped-key permissions before dispatch. Omitted scopes retain server defaults; nonempty selections replace defaults.
+
 ## 1.0.0
 
 - Initial Node.js JavaScript/TypeScript SDK with ESM/CommonJS exports and declarations.

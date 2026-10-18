@@ -1,6 +1,6 @@
 {
   "name": "@kompressr/sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Kompressr file storage, optimization and delivery client for Node.js and TypeScript",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -35,7 +35,7 @@
     "verify": "npm run build && npm run typecheck && npm test && node scripts/verify-package.mjs"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.0.0"
   },
   "license": "MIT",
   "author": "Kompressr",

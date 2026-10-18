@@ -146,6 +146,16 @@ describe('timeouts, authorization, malformed responses and replay safety', () =>
 });
 
 describe('platform administration and endpoint selection', () => {
+  it('rejects empty scopes before dispatch and preserves omitted or explicit permissions', async () => {
+    const fetch = vi.fn<Fetch>().mockImplementation(async () => json({ success: true, id: keyId, key_id: keyId, api_key: 'one-time-key' }));
+    const platform = client(fetch).platform;
+    await expect(platform.createUploadKey(userId, { name: 'Runtime', scopes: [] })).rejects.toMatchObject({ code: 'INVALID_ARGUMENT', mayHaveSucceeded: false });
+    expect(fetch).not.toHaveBeenCalled();
+    await platform.createUploadKey(userId, { name: 'Runtime' });
+    await platform.createUploadKey(userId, { name: 'Runtime', scopes: ['status'] });
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({ name: 'Runtime' });
+    expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toEqual({ name: 'Runtime', scopes: ['status'] });
+  });
   it('defaults to production and preserves explicit custom management and upload origins', () => {
     expect(resolveEndpoints()).toEqual({ apiBaseUrl: 'https://kompressr.com', uploadBaseUrl: 'https://uploads.kompressr.com' });
     expect(resolveEndpoints({ apiBaseUrl: 'https://management.example.test', uploadBaseUrl: 'https://uploads.example.test' })).toEqual({ apiBaseUrl: 'https://management.example.test', uploadBaseUrl: 'https://uploads.example.test' });

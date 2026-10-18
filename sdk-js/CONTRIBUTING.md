@@ -1,6 +1,6 @@
 # SDK development
 
-Use a checkout of [kompressrcdn/clients](https://github.com/kompressrcdn/clients) with Node.js 22.12+ or 24. From `sdk-js`:
+Use a checkout of [kompressrcdn/clients](https://github.com/kompressrcdn/clients) with Node.js 24 for development tooling. The published package supports Node.js 22 and later. CI installs development dependencies on Node 24 before running the suites on each supported runtime. From `sdk-js`:
 
 ```sh
 npm ci --ignore-scripts

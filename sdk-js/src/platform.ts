@@ -38,7 +38,7 @@ export class PlatformClient {
   }
   async createUploadKey(id: string, input: CreateKeyOptions, options?: RequestOptions): Promise<IssuedKey> {
     if (typeof input.name !== 'string' || !input.name.trim() || Buffer.byteLength(input.name.trim()) > 120) invalid('Key name must contain 1–120 UTF-8 bytes.');
-    if (input.scopes !== undefined && (!Array.isArray(input.scopes) || input.scopes.some(x => !['upload', 'status', 'list', 'private_url', 'delete'].includes(x)))) invalid('Unsupported upload scope.');
+    if (input.scopes !== undefined && (!Array.isArray(input.scopes) || input.scopes.length === 0 || input.scopes.some(x => !['upload', 'status', 'list', 'private_url', 'delete'].includes(x)))) invalid('scopes must contain at least one supported scope; omit scopes to use server defaults.');
     if (input.allowedVisibility !== undefined && !['public', 'private', 'both'].includes(input.allowedVisibility)) invalid('Invalid allowedVisibility.');
     if (input.allowedAssetTypes !== undefined && (!Array.isArray(input.allowedAssetTypes) || input.allowedAssetTypes.some(x => !Number.isInteger(x) || x < 1))) invalid('Asset types must be positive integers.');
     if (input.expiresAt !== undefined && (!Number.isFinite(Date.parse(input.expiresAt)) || Date.parse(input.expiresAt) <= Date.now())) invalid('expiresAt must be a future timestamp.');

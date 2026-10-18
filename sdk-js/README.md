@@ -10,9 +10,9 @@ npm install @kompressr/sdk
 
 [Create an account](https://kompressr.com/signup) and choose a plan with API upload access. In [Dashboard → Projects](https://kompressr.com/dashboard/projects), open a project and select **API Keys**. Generate a key and store its full value securely as `KOMPRESSR_API_KEY` on your backend; it is shown only once. Project keys use `KEY_ID.SECRET` format. Use the project's UUID when listing uploads.
 
-For source builds before publication, follow [CONTRIBUTING.md](CONTRIBUTING.md), run `npm pack` in the built package directory and install the resulting tarball in your application.
+For source builds, follow [CONTRIBUTING.md](https://github.com/kompressrcdn/clients/blob/main/sdk-js/CONTRIBUTING.md), run `npm pack` in the built package directory and install the resulting tarball in your application.
 
-Supported runtimes: Node 22.12+ and Node 24. Both ESM imports and CommonJS `require` are provided, with TypeScript declarations. Browser, edge, Bun, Deno and React Native support are not certified by this release. API uploads require an eligible paid plan; the free dashboard image trial does not grant API upload access. File formats, sizes and processing options depend on your plan and project.
+Requires Node.js 22 or later. Both ESM imports and CommonJS `require` are provided, with TypeScript declarations. Browser, edge, Bun, Deno and React Native support are not certified by this release. API uploads require an eligible paid plan; the free dashboard image trial does not grant API upload access. File formats, sizes and processing options depend on your plan and project.
 
 ## First upload
 
@@ -33,7 +33,7 @@ const ready = await files.waitUntilReady(accepted.id);
 return ready.cdn_url; // In your application's handler or background job.
 ```
 
-`saveAssetId` represents your own database/job persistence. See [the executable example](examples/public-upload.mjs), which saves the ID to a local receipt before waiting, and [the TypeScript example](examples/usage.ts).
+`saveAssetId` represents your own database/job persistence. See [the executable example](https://github.com/kompressrcdn/clients/blob/main/sdk-js/examples/public-upload.mjs), which saves the ID to a local receipt before waiting, and [the TypeScript example](https://github.com/kompressrcdn/clients/blob/main/sdk-js/examples/usage.ts).
 
 An accepted upload can contain a URL while processing is pending. **Do not share the URL until processing is complete.** The helper returns the current processed result. Its default two-minute wait is a polling budget, not a processing-time guarantee. For longer jobs, save the ID and poll later; a timeout does not cancel processing or justify uploading again.
 
@@ -57,7 +57,7 @@ Supply both origins when they differ. A custom management origin uses the same o
 
 Keep project/master keys on your trusted backend. A scoped key only accesses the identity and actions allowed by the server. Upload, status and asset management do not need a project ID; `listUploads` requires `projectId` in the constructor or call. Default scoped keys exclude deletion. Giving the client a key does not grant additional permissions or plan capabilities.
 
-For an application with a browser upload form, send the file to your backend and use `uploadBlob` there. The [Next.js route recipe](examples/next-route.ts) demonstrates the server integration and its required application authentication. Direct browser scoped uploads need a separately verified credential and CORS workflow.
+For an application with a browser upload form, send the file to your backend and use `uploadBlob` there. The [Next.js route recipe](https://github.com/kompressrcdn/clients/blob/main/sdk-js/examples/next-route.ts) demonstrates the server integration and its required application authentication. Direct browser scoped uploads need a separately verified credential and CORS workflow.
 
 ## Private files
 
@@ -134,6 +134,6 @@ The default server scopes exclude `delete`. Supplying `scopes` replaces the defa
 
 ## Reference, release and verification
 
-See [API.md](API.md) for every method, option, result shape and permission; [CHANGELOG.md](CHANGELOG.md) for migration/release status. No server-side URL import, arbitrary filesystem path overwrite, backup/recovery, or S3 compatibility is promised by this client.
+See [API.md](https://github.com/kompressrcdn/clients/blob/main/sdk-js/API.md) for every method, option, result shape and permission; [CHANGELOG.md](https://github.com/kompressrcdn/clients/blob/main/sdk-js/CHANGELOG.md) for changes and migration notes.
 
-From the SDK package directory, `npm run verify` builds, typechecks, tests and verifies packed consumers. Local HTTP fixtures and protocol checks demonstrate client behavior; they do not certify the deployed processing service. Release verification includes authenticated lifecycle and registry-installation checks. This package has an independent release lifecycle within the clients repository. SDK publication must precede MCP publication because MCP depends on the SDK version. See [CONTRIBUTING.md](CONTRIBUTING.md) for local development and release checks.
+From the SDK package directory, `npm run verify` builds, typechecks, tests and verifies packed consumers. Local HTTP fixtures and protocol checks demonstrate client behavior; they do not certify the deployed processing service. Release verification includes authenticated lifecycle and registry-installation checks. This package has an independent release lifecycle within the clients repository. SDK publication must precede MCP publication because MCP depends on the SDK version. See [CONTRIBUTING.md](https://github.com/kompressrcdn/clients/blob/main/sdk-js/CONTRIBUTING.md) for local development and release checks.
