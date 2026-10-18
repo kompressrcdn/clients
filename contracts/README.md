@@ -9,3 +9,7 @@ node scripts/verify-contract.mjs
 ```
 
 When updating a contract, review the HTTP behavior, replace the snapshot, update its version/checksum and adjust types, validation, examples and affected tests together. The checksum check establishes snapshot consistency; it is not complete OpenAPI schema validation. Root verification tests the shared examples without live credentials.
+
+## SDK compatibility
+
+The [SDK behavior reference](sdk-behavior.md) defines the shared waiting, cancellation, retry, permission and recovery expectations beyond HTTP method signatures. Every language package provides its own method mapping and behavioral verification.

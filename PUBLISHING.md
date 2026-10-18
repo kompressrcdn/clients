@@ -1,15 +1,32 @@
 # Publishing Kompressr clients
 
-Each package has an independent version, lockfile and release. Extend this guide with native tooling and registry steps when another SDK is implemented.
+Release each package independently. Commands in this guide run from the clients repository root unless a package guide says otherwise.
 
-| Folder | Package | Current version | Order |
-| --- | --- | --- | --- |
-| `sdk-js` | `@kompressr/sdk` | `1.0.0` | First |
-| `mcp-server` | `@kompressr/mcp-server` | `2.0.0` | After its SDK dependency |
+| Package | Release version | Registry and instructions |
+| --- | --- | --- |
+| JavaScript / TypeScript | `1.0.1` | npm: `@kompressr/sdk`; follow the steps below |
+| MCP server | `2.0.1` | npm: `@kompressr/mcp-server`; publish after the JS SDK |
+| Python | `0.1.0` | [PyPI: `kompressr-sdk`](sdk-python/PUBLISHING.md) |
+| Go | `0.1.0` | [Go module: `github.com/kompressrcdn/clients/sdk-go`](sdk-go/PUBLISHING.md) |
+| Java | `0.1.0` | [Maven Central: `com.kompressr:kompressr-sdk`](sdk-java/PUBLISHING.md) |
+| C# / .NET | `0.1.0` | [NuGet: `Kompressr.Sdk`](sdk-dotnet/PUBLISHING.md) |
+| PHP | `0.1.0` | [Packagist: `kompressr/sdk`](sdk-php/PUBLISHING.md) |
+| Ruby | `0.1.0` | [RubyGems: `kompressr-sdk`](sdk-ruby/PUBLISHING.md) |
+| Desktop MCP bundle | `2.0.1` | [Smithery: `kompressr/kompressr`](smithery/PUBLISHING.md); publish after npm MCP |
+
+## Common release requirements
+
+Use a reviewed, committed source revision. Push that revision before creating public source tags or announcing links to new documentation. Review `git status` first so the release does not accidentally include unrelated work. Go tags and the PHP split include committed files only.
+
+Confirm publisher access to each registry. A GitHub organization does not grant registry ownership, and a missing package name is not a reservation. Java needs a verified `com.kompressr` namespace plus a GPG key. PHP needs a package-only public mirror with `composer.json` at its root. Their guides include setup and release commands.
+
+Run each package's native verifier and inspect the produced distribution. All-package setup and verification are in [CONTRIBUTING.md](CONTRIBUTING.md). Complete a disposable-project check for public/private upload, saved-ID readiness, delivery, signing, scope denial and deletion before announcing availability. Keep credentials and run results outside the repository. Tests against local fixtures do not establish production authorization.
+
+Finish README content and changelogs before packing. Public READMEs describe installation and use; release evidence belongs in the release record. Never replace an existing published version or move its tag. If a publish request times out, check the registry for that exact version before retrying.
 
 ## Prepare a release
 
-Use Node.js 22.12+ or 24. Confirm npm scope/package access, version availability and two-factor authentication. GitHub organization membership does not grant npm publish access. Published versions cannot be reused.
+Use Node.js 24 for release tooling; the published packages support Node.js 22 and later. Confirm npm scope/package access, version availability and two-factor authentication. GitHub organization membership does not grant npm publish access. Published versions cannot be reused.
 
 ```sh
 npm login --registry=https://registry.npmjs.org
@@ -18,7 +35,7 @@ npm view @kompressr/sdk versions dist-tags --json
 npm view @kompressr/mcp-server versions dist-tags --json
 ```
 
-Update changed package versions, lock roots and changelogs. MCP's SDK dependency, registry URL and integrity must identify the exact SDK release. Keep registry dependencies in release metadata. Run verification on both supported Node lines:
+Update changed package versions, lock roots and changelogs. MCP's SDK dependency, registry URL and integrity must identify the exact SDK release. Keep registry dependencies in release metadata. Require the full Node CI matrix to pass. Use Node 24 for local release verification:
 
 ```sh
 npm --prefix sdk-js ci --ignore-scripts
@@ -30,7 +47,7 @@ Review dependency audits, public content and package contents. Complete authenti
 
 ## Pack and inspect
 
-Finish shipped content before packing. Run these blocks from the repository root in one shell:
+Run these blocks from the repository root in one shell. `KOMPRESSR_RELEASE_DIR` is a temporary output directory for the exact tarballs you inspect and upload; it is not an application setting or secret. Keep it until registry verification is complete:
 
 ```sh
 KOMPRESSR_RELEASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/kompressr-release.XXXXXX")"
@@ -78,10 +95,33 @@ npm dist-tag add "@kompressr/sdk@$KOMPRESSR_SDK_VERSION" latest
 npm dist-tag add "@kompressr/mcp-server@$KOMPRESSR_MCP_VERSION" latest
 ```
 
-Record package versions, source revision and checksums in release notes. Use package tags such as `sdk-js-v1.0.0` and `mcp-server-v2.0.0`. Update the root README's release status after publication. Do not edit an already published artifact; shipped-file changes require a new version.
+Record package versions, source revision and checksums in release notes. Use package tags such as `sdk-js-v1.0.1` and `mcp-server-v2.0.1`. Do not edit an already published artifact; shipped-file changes require a new version.
 
 CI verifies packages and does not publish. Pushes, GitHub releases and package publication follow maintainer authorization. If a release fails, stop promotion and use an unused version for corrections. Restore a prior dist-tag or pin a compatible version for rollback; accepted uploads/deletions cannot be undone by rolling back a package.
 
-## Future SDKs
+## Additional language releases
 
-Add each implemented SDK's registry name, supported runtime, publish access, native verification/pack/publish commands, installation checks and rollback procedure. Preserve independent releases; do not assume every language uses npm.
+Each native SDK has its own release procedure. These packages do not depend on npm publication and can be released independently after verification.
+
+| Package | Registry coordinate | Release guide |
+| --- | --- | --- |
+| Python | PyPI `kompressr-sdk` | [Python publishing](sdk-python/PUBLISHING.md) |
+| Go | `github.com/kompressrcdn/clients/sdk-go` | [Go publishing](sdk-go/PUBLISHING.md) |
+| Java | Maven Central `com.kompressr:kompressr-sdk` | [Java publishing](sdk-java/PUBLISHING.md) |
+| C# / .NET | NuGet `Kompressr.Sdk` | [.NET publishing](sdk-dotnet/PUBLISHING.md) |
+| PHP | Packagist `kompressr/sdk` | [PHP publishing](sdk-php/PUBLISHING.md) |
+| Ruby | RubyGems `kompressr-sdk` | [Ruby publishing](sdk-ruby/PUBLISHING.md) |
+
+Run the affected package's complete native verifier, inspect its distribution, and finish authenticated acceptance checks before publishing it. The shared archive checker accepts wheels, JARs, NuGet packages, Ruby gems and tar/ZIP distributions:
+
+```sh
+node scripts/check-distribution.mjs PATH_TO_ARCHIVE
+```
+
+This check needs Node.js and Python 3, rejects unsafe archive entries, and scans every member for public-content violations without extracting files. For gems it also scans archive headers and decompresses the nested package metadata and payload within fixed limits. It accepts the ordinary tar/gzip format produced by RubyGems; extended tar headers, optional gzip metadata and trailing payloads are rejected. It supplements the package's native installation/consumer tests. Inspect generated files as well as the repository; ignored build directories are not a guarantee that their contents are publishable.
+
+Java requires verification of the `com.kompressr` Maven namespace. Go releases use the module-specific tag prefix `sdk-go/v`; publishing another package must not create a Go release accidentally. Packagist expects `composer.json` at the VCS repository root, so PHP publication uses a package-only release mirror described in its guide. Implementation remains in this repository; creating or pushing a release mirror is a maintainer release action.
+
+After each release, install that exact version from its public registry in a clean application, compare artifact checksums where the registry exposes archives, and repeat the dedicated-project lifecycle. Retain the previously verified release for application pinning; corrections use a new version rather than replacing a published artifact.
+
+Official npm references: [publishing](https://docs.npmjs.com/cli/v11/commands/npm-publish/), [distribution tags](https://docs.npmjs.com/cli/v11/commands/npm-dist-tag/).

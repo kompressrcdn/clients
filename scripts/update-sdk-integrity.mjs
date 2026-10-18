@@ -8,7 +8,10 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const directory = mkdtempSync(join(tmpdir(), 'kompressr-sdk-integrity-'));
 try {
-  const [packed] = JSON.parse(execFileSync('npm', ['pack', '--json', '--pack-destination', directory], { cwd: join(root, 'sdk-js'), encoding: 'utf8' }));
+  // npm 10 includes lifecycle output in --json stdout. Build separately so
+  // packing returns only metadata while still verifying fresh build output.
+  execFileSync('npm', ['run', 'build'], { cwd: join(root, 'sdk-js'), stdio: 'inherit' });
+  const [packed] = JSON.parse(execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', directory], { cwd: join(root, 'sdk-js'), encoding: 'utf8' }));
   const manifest = JSON.parse(readFileSync(join(root, 'mcp-server/package.json'), 'utf8'));
   assert.equal(packed.name, '@kompressr/sdk');
   assert.equal(packed.version, manifest.dependencies['@kompressr/sdk']);

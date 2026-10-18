@@ -2,12 +2,28 @@
 
 Official libraries and agent tools for storing, optimizing and delivering files with [Kompressr](https://kompressr.com).
 
-| Package | Use | Documentation |
-| --- | --- | --- |
-| `@kompressr/sdk` | JavaScript and TypeScript applications on Node.js | [Quick start](sdk-js/README.md), [API reference](sdk-js/API.md), [examples](sdk-js/examples) |
-| `@kompressr/mcp-server` | MCP clients and AI agents | [Setup and tools](mcp-server/README.md) |
+| Language or tool | Package | Minimum runtime | Get started |
+| --- | --- | --- | --- |
+| JavaScript / TypeScript | npm: `@kompressr/sdk` | Node.js 22 | [Node.js SDK](sdk-js/README.md) |
+| Python | PyPI: `kompressr-sdk` | Python 3.11 | [Python SDK](sdk-python/README.md) |
+| Go | `github.com/kompressrcdn/clients/sdk-go` | Go 1.24 | [Go SDK](sdk-go/README.md) |
+| Java | Maven Central: `com.kompressr:kompressr-sdk` | Java 17 | [Java SDK](sdk-java/README.md) |
+| C# / .NET | NuGet: `Kompressr.Sdk` | .NET 8 | [.NET SDK](sdk-dotnet/README.md) |
+| PHP | Packagist: `kompressr/sdk` | 64-bit PHP 8.1 | [PHP SDK](sdk-php/README.md) |
+| Ruby | RubyGems: `kompressr-sdk` | MRI Ruby 3.2 | [Ruby SDK](sdk-ruby/README.md) |
+| MCP | npm: `@kompressr/mcp-server` | Node.js 22 | [Agent setup](mcp-server/README.md), [desktop extension](smithery/README.md) |
 
-Published releases: SDK **1.0.0**, MCP **2.0.0**. Both are available on npm under `latest`. Each package has its own version and changelog. Node.js 22.12+ and 24 are supported.
+Each package has its own version and changelog. The SDKs share the same [file, permission and recovery behavior](contracts/sdk-behavior.md), expressed through language-native APIs. MCP uses the JavaScript SDK.
+
+## Framework compatibility
+
+These are server-side libraries with no application-framework dependency. Use them from applications, command-line scripts or background jobs that meet the package's runtime and dependency requirements.
+
+For Python, use `KompressrClient` in synchronous Django views or worker tasks, and `AsyncKompressrClient` in FastAPI `async def` handlers or Django async views. The sync client deliberately rejects use inside a running asyncio loop. Ruby's synchronous client works in plain Ruby and Rails controllers/jobs; it does not provide a separate async API. Keep project and customer keys on trusted servers, and choose the credential for the authenticated user before making a request.
+
+Framework upload wrappers may need adapting: pass supported bytes or a regular local file to the SDK. For example, Django's `UploadedFile` and FastAPI's `UploadFile` are not directly accepted by the Python upload methods. Use bytes for small uploads, or save large uploads to a regular file and stream that file using the package's documented input type.
+
+Framework independence does not imply browser support, every language version or every hosting environment. Check each package's runtime, TLS/network, filesystem and concurrency requirements. A framework-specific plugin is not required.
 
 ## Choose your starting point
 
@@ -45,7 +61,7 @@ Ordinary API uploads are included on paid plans, subject to file and usage limit
 
 ## Connect an agent
 
-Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.0` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [Smithery installation walkthrough](smithery/README.md). Maintainers can use the separate [bundle publishing guide](smithery/PUBLISHING.md).
+Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.1` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [Smithery installation walkthrough](smithery/README.md). Maintainers can use the separate [bundle publishing guide](smithery/PUBLISHING.md).
 
 ## Develop from source
 
@@ -56,6 +72,6 @@ npm --prefix sdk-js ci --ignore-scripts
 node scripts/verify.mjs
 ```
 
-Verification builds/tests both packages, checks public content and the shared contract, and exercises installed packages using local HTTP fixtures. It requires no live account or service checkout. See [CONTRIBUTING.md](CONTRIBUTING.md), [publishing instructions](PUBLISHING.md) and the [public contract](contracts/README.md).
+This command verifies the JS SDK and MCP, checks public source content and the shared contract, and exercises their installed packages using local HTTP fixtures. For another language, use its native verifier or `node scripts/verify-all.mjs` with a language name after installing its development tools. See [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisites and the all-package command, [publishing instructions](PUBLISHING.md) and the [public contract](contracts/README.md). Local verification requires no live account or service checkout.
 
 Report bugs through [GitHub issues](https://github.com/kompressrcdn/clients/issues). Follow [SECURITY.md](SECURITY.md) for private security reports. Packages are [MIT licensed](LICENSE).

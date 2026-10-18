@@ -6,3 +6,21 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Native SDK build outputs and local dependency environments
+sdk-python/.venv/
+sdk-python/**/__pycache__/
+sdk-python/**/*.egg-info/
+sdk-python/.pytest_cache/
+sdk-python/.mypy_cache/
+sdk-python/.ruff_cache/
+sdk-python/build/
+sdk-java/target/
+sdk-dotnet/**/bin/
+sdk-dotnet/**/obj/
+sdk-dotnet/artifacts/
+sdk-php/vendor/
+sdk-ruby/.bundle/
+sdk-ruby/vendor/
+sdk-ruby/pkg/
+sdk-ruby/coverage/
