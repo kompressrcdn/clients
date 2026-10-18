@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kompressr-sdk"
+version = "0.1.0"
+description = "Typed synchronous and asynchronous Python clients for Kompressr"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Kompressr"}]
+dependencies = ["httpx>=0.28.1,<1", "httpcore[asyncio]>=1.0.9,<2"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://kompressr.com"
+Repository = "https://github.com/kompressrcdn/clients"
+Issues = "https://github.com/kompressrcdn/clients/issues"
+
+[project.optional-dependencies]
+dev = ["build>=1.2,<2", "mypy>=1.15,<2", "twine>=6,<7", "cryptography>=45,<51"]
+
+[tool.hatch.build.targets.wheel]
+core-metadata-version = "2.4"
+packages = ["src/kompressr"]
+
+[tool.hatch.build.targets.sdist]
+core-metadata-version = "2.4"
+include = ["/src", "/tests", "/examples", "/scripts", "/README.md", "/API.md", "/PARITY.md", "/PUBLISHING.md", "/CHANGELOG.md", "/LICENSE", "/pyproject.toml"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src/kompressr"]
