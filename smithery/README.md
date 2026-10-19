@@ -47,5 +47,3 @@ Next, ask: “List my Kompressr uploads.” You should see the file you just upl
 The process can read files allowed by your OS permissions; it has no directory allowlist. Use your host's approval controls and sandbox. A scoped key restricts Kompressr API access, not local file access. URL uploads download through this machine before being sent to Kompressr.
 
 One MCP process uses one credential. See the [chatbot guide](../guides/chatbot-integration.md) for separate users. For a client supporting local stdio but not MCPB, use the [npm configuration](../mcp-server/README.md#setup). Clients accepting only HTTPS MCP URLs need a separately hosted integration or relay; there is no hosted endpoint supplied by this bundle.
-
-Maintainers: [build, verify and publish the bundle](PUBLISHING.md). Users installing the published bundle do not need those steps.
