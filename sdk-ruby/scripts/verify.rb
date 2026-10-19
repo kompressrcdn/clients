@@ -22,7 +22,7 @@ run(ruby, 'test/run.rb', env: source_env)
 
 spec = Gem::Specification.load(File.join(root, 'kompressr-sdk.gemspec'))
 abort 'Cannot load package specification.' unless spec
-required = %w[lib/kompressr.rb README.md API.md PARITY.md PUBLISHING.md CHANGELOG.md LICENSE examples/private_upload.rb examples/rails_service.rb]
+required = %w[lib/kompressr.rb README.md API.md PARITY.md CHANGELOG.md LICENSE examples/private_upload.rb examples/rails_service.rb]
 abort 'Required public package files are missing.' unless required.all? { |path| spec.files.include?(path) && File.file?(path) }
 artifact = File.join(root, 'pkg', "#{spec.name}-#{spec.version}.gem")
 FileUtils.mkdir_p(File.dirname(artifact))

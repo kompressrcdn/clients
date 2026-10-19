@@ -29,4 +29,4 @@ The CI matrix targets MRI Ruby 3.2, 3.3, 3.4 and 4.0. Run the native verifier on
 
 The SDK is synchronous and has no automatic native-library recovery beyond its explicit GET retry loop. DNS admission is bounded at eight workers and connection admission at 64 attempts. A blocked OS resolver retains a slot until it finishes but cannot issue a late request. Filesystem stalls and Ruby thread scheduling remain OS/runtime boundaries. See [API.md](API.md#errors-and-timing) for exact limits and supported runtimes.
 
-These local fixtures establish client behavior, not deployed plan entitlement, tenant isolation or registry publication. Maintainers must run the authenticated acceptance checklist in [PUBLISHING.md](PUBLISHING.md) on a dedicated project before release.
+These local fixtures establish client behavior, not deployed plan entitlement, tenant isolation or registry publication.

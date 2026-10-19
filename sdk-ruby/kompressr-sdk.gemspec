@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
     'rubygems_mfa_required' => 'true'
   }
   spec.files = Dir.chdir(__dir__) do
-    (Dir['lib/**/*.rb', 'examples/**/*.rb'] + %w[README.md API.md PARITY.md PUBLISHING.md CHANGELOG.md LICENSE]).sort
+    (Dir['lib/**/*.rb', 'examples/**/*.rb'] + %w[README.md API.md PARITY.md CHANGELOG.md LICENSE]).sort
   end
   spec.require_paths = ['lib']
   spec.add_dependency 'json', '>= 2.7', '< 3'

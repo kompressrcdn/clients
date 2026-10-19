@@ -134,7 +134,7 @@ failures = batch.fetch('results').reject { |item| item.fetch('accepted') }
 
 Deletion is permanent and asynchronous. Acceptance means cleanup was requested; it does not establish physical removal or cache invalidation. Bulk deletion keeps each item's outcome, including failures returned inside HTTP 200.
 
-Read the [API reference](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/API.md), [behavior and coverage map](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/PARITY.md), [runnable examples](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/examples) and [publishing instructions](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/PUBLISHING.md).
+Read the [API reference](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/API.md), [behavior and coverage map](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/PARITY.md) and [runnable examples](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/examples).
 
 ## Verify from source
 
