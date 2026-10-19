@@ -124,4 +124,4 @@ KOMPRESSR_TEST_FRAMEWORK=net10.0 sh scripts/verify.sh
 
 Verification builds the library and examples, runs loopback HTTP tests, packs a NuGet archive, installs it into a clean consumer and runs the HTTP suite again. No credentials or production access are needed. The tests include a 32 MiB file upload with an allocation limit.
 
-The [API reference](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/API.md), [behavior coverage](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/PARITY.md), [runnable examples](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/examples/Program.cs) and [publishing guide](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/PUBLISHING.md) cover the remaining details.
+The [API reference](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/API.md), [behavior coverage](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/PARITY.md) and [runnable examples](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/examples/Program.cs) cover the remaining details.
