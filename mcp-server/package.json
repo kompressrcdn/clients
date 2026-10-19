@@ -1,7 +1,7 @@
 {
   "name": "@kompressr/mcp-server",
-  "version": "2.0.1",
-  "description": "Kompressr CDN MCP server for AI agents \u2014 upload, optimize, and serve assets",
+  "version": "2.0.2",
+  "description": "Kompressr CDN MCP server for AI agents — upload, optimize, and serve assets",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "prepack": "npm run build",
     "install:local-sdk": "node scripts/install-local-sdk.mjs",
-    "verify": "npm run build && npm run typecheck && npm test && node scripts/verify-packages.mjs"
+    "verify": "node ../scripts/verify-mcp-metadata.mjs && npm run build && npm run typecheck && npm test && node scripts/verify-packages.mjs"
   },
   "keywords": [
     "mcp",
@@ -61,5 +61,6 @@
   },
   "bugs": {
     "url": "https://github.com/kompressrcdn/clients/issues"
-  }
+  },
+  "mcpName": "com.kompressr/kompressr"
 }

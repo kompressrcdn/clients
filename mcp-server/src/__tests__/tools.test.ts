@@ -25,7 +25,7 @@ describe('MCP protocol schemas, annotations and workflow', () => {
     expect(tools.map(x => x.name).sort()).toEqual(['register', 'verify_email', 'upload_asset', 'get_asset_status', 'list_assets', 'generate_private_url', 'wait_for_asset', 'get_asset_deletion_status', 'delete_asset', 'bulk_delete_assets'].sort());
     expect(tools.find(x => x.name === 'delete_asset')?.annotations).toMatchObject({ destructiveHint: true, readOnlyHint: false, idempotentHint: true });
     expect(tools.find(x => x.name === 'get_asset_status')?.annotations?.readOnlyHint).toBe(true);
-    expect(client.getServerVersion()?.version).toBe('2.0.1');
+    expect(client.getServerVersion()?.version).toBe('2.0.2');
   });
   it('returns structured acceptance without marking a pending URL ready, then current processed status', async () => {
     const { adapter, client } = await connected();

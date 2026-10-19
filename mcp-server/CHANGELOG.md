@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2
+
+- Add official MCP Registry metadata and downloadable desktop bundles through GitHub Releases.
+- Keep the existing tools, configuration and SDK 1.0.1 behavior.
+
 ## 2.0.1
 
 - Support Node.js 22.0 and later, including the Smithery bundle.

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.kompressr/kompressr",
+  "title": "Kompressr",
+  "description": "Upload, optimize and manage files, wait for processing, and generate private delivery links.",
+  "version": "2.0.2",
+  "websiteUrl": "https://kompressr.com/agents",
+  "repository": {
+    "url": "https://github.com/kompressrcdn/clients",
+    "source": "github",
+    "subfolder": "mcp-server"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@kompressr/mcp-server",
+      "version": "2.0.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "KOMPRESSR_API_KEY",
+          "description": "Your project or scoped API key. Use a scoped key for an individual agent.",
+          "format": "string",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "KOMPRESSR_PROJECT_ID",
+          "description": "Project UUID. Required for listing uploads; other file operations need only the API key.",
+          "format": "string",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}

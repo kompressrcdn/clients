@@ -1,8 +1,8 @@
-# Install Kompressr from Smithery
+# Install the Kompressr desktop extension
 
-The [kompressr/kompressr listing](https://smithery.ai/servers/kompressr/kompressr) provides a downloadable `.mcpb` extension. Install it in a desktop MCP client to upload files, wait for processing, get delivery links, list uploads and manage deletion.
+Download the `.mcpb` desktop extension from [Kompressr GitHub Releases](https://github.com/kompressrcdn/clients/releases). Install it in a desktop MCP client to upload files, wait for processing, get delivery links, list uploads and manage deletion.
 
-**Local stdio** means your desktop application starts the Kompressr server as a process on your computer and talks to it through that process's input/output streams. The server then calls Kompressr over HTTPS. Keep the desktop application running while using its tools. This listing does not provide a hosted MCP URL for a web-only client.
+**Local stdio** means your desktop application starts the Kompressr server as a process on your computer and talks to it through that process's input/output streams. The server then calls Kompressr over HTTPS. Keep the desktop application running while using its tools. The extension does not provide a hosted MCP URL for a web-only client.
 
 ## Before you start
 
@@ -14,7 +14,9 @@ The [kompressr/kompressr listing](https://smithery.ai/servers/kompressr/kompress
 
 The following walkthrough uses **Claude Desktop**. It follows Anthropic's [custom desktop extension instructions](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop).
 
-1. [Download the Kompressr bundle](https://api.smithery.ai/servers/kompressr%2Fkompressr/download). Save it with a `.mcpb` extension, for example `kompressr-2.0.1.mcpb`.
+1. Open [Kompressr GitHub Releases](https://github.com/kompressrcdn/clients/releases), choose a **Kompressr MCP** release, and download its `kompressr-<version>.mcpb` file under **Assets**. Choose the desktop bundle rather than a source-code archive.
+
+   Kompressr is also listed on [Smithery](https://smithery.ai/servers/kompressr/kompressr). Check the bundle version when downloading from a directory.
 2. In Claude Desktop, open **Settings → Extensions → Advanced settings**. Under **Extension Developer**, choose **Install Extension…**, then select the downloaded file.
 3. Review the installation prompt. Enter the full key in **Kompressr API key** and the matching UUID in **Project ID**. These are extension settings; do not paste the key into a conversation.
 4. Finish installation. In a new chat, choose **+ → Connectors** and find Kompressr. Check that its ten tools are available, including `upload_asset`, `wait_for_asset` and `generate_private_url`.

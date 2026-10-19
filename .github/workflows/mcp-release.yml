@@ -1,0 +1,56 @@
+name: Prepare MCP release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prepare-mcp-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            sdk-js/package-lock.json
+            mcp-server/package-lock.json
+      - name: Install verification dependencies
+        run: npm --prefix sdk-js ci --ignore-scripts
+      - name: Verify SDK and MCP packages
+        run: node scripts/verify.mjs
+      - name: Build and inspect release files
+        run: node scripts/build-mcp-release.mjs "$RUNNER_TEMP/kompressr-mcp-release"
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(node -p 'JSON.parse(require("fs").readFileSync("mcp-server/package.json", "utf8")).version')"
+          release_dir="$RUNNER_TEMP/kompressr-mcp-release"
+          tag="mcp-server/v${version}"
+          existing_tag="$(git ls-remote --tags origin "refs/tags/$tag")"
+          if [ -n "$existing_tag" ]; then
+            printf 'Tag %s already exists; inspect its release before continuing.\n' "$tag" >&2
+            exit 1
+          fi
+          gh release create "$tag" \
+            "$release_dir/kompressr-mcp-server-${version}.tgz" \
+            "$release_dir/kompressr-${version}.mcpb" \
+            "$release_dir/server.json" \
+            "$release_dir/SHA256SUMS" \
+            "$release_dir/RELEASE_NOTES.md" \
+            --draft --latest=false --target "$GITHUB_SHA" \
+            --title "Kompressr MCP ${version}" \
+            --notes-file "$release_dir/RELEASE_NOTES.md"

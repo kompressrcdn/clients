@@ -2,7 +2,7 @@
 
 Kompressr tools for MCP agents: upload files, wait for processing, generate private links, paginate uploads and permanently delete explicit asset IDs. File operations use the separate `@kompressr/sdk` package. Applications can use that SDK directly without starting MCP.
 
-Requires Node.js 22 or later.
+Requires Node.js 22 or later. For a desktop client that supports MCPB extensions, [download a Kompressr MCP bundle from GitHub Releases](https://github.com/kompressrcdn/clients/releases) and follow the [desktop installation guide](https://github.com/kompressrcdn/clients/blob/main/smithery/README.md).
 
 ## Setup
 
@@ -15,7 +15,7 @@ Configure an MCP client to run the package:
   "mcpServers": {
     "kompressr": {
       "command": "npx",
-      "args": ["-y", "@kompressr/mcp-server@2.0.1"],
+      "args": ["-y", "@kompressr/mcp-server@2.0.2"],
       "env": {
         "KOMPRESSR_API_KEY": "YOUR_PROJECT_OR_SCOPED_KEY",
         "KOMPRESSR_PROJECT_ID": "YOUR_PROJECT_UUID"

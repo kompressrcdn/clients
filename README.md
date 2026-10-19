@@ -61,7 +61,7 @@ Ordinary API uploads are included on paid plans, subject to file and usage limit
 
 ## Connect an agent
 
-Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.1` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [Smithery installation walkthrough](smithery/README.md).
+Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.2` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [desktop extension walkthrough](smithery/README.md).
 
 ## Develop from source
 
