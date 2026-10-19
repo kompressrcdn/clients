@@ -87,4 +87,4 @@ This runs local HTTP fixtures, builds main/source/Javadoc JARs, installs the pac
 
 Runtime dependencies are Apache HttpClient 5 and Jackson 2.21 LTS. HttpClient's automatic retries, redirects and cookies are disabled; the SDK controls retries and cancellation. HttpClient uses SLF4J: configure your application's normal logging provider if desired, and avoid enabling HTTP wire/header logging with real credentials.
 
-See [publishing instructions](https://github.com/kompressrcdn/clients/blob/main/sdk-java/PUBLISHING.md), [changelog](https://github.com/kompressrcdn/clients/blob/main/sdk-java/CHANGELOG.md) and [MIT license](https://github.com/kompressrcdn/clients/blob/main/sdk-java/LICENSE).
+See [changelog](https://github.com/kompressrcdn/clients/blob/main/sdk-java/CHANGELOG.md) and [MIT license](https://github.com/kompressrcdn/clients/blob/main/sdk-java/LICENSE).
