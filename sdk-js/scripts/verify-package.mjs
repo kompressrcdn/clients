@@ -43,6 +43,9 @@ try {
   let output = ''; child.stdout.on('data', chunk => { output += chunk; }); child.stderr.on('data', chunk => { output += chunk; });
   const code = await new Promise((resolve, reject) => { child.once('error',reject); child.once('exit',resolve); });
   assert.equal(code,0,output); assert(uploaded); assert.equal(JSON.parse(readFileSync(receipt,'utf8')).asset_id,42); assert(output.includes('https://cdn.example/ready.webp'));
+  const deadlineCheck = join(directory, 'deadlines.mjs');
+  copyFileSync(join(root, 'scripts/verify-deadlines.mjs'), deadlineCheck);
+  execFileSync(process.execPath, ['--expose-gc', deadlineCheck], { cwd: directory, stdio: 'inherit', timeout: 30_000 });
   console.log('Packed SDK verified: ESM, CommonJS, TypeScript declarations and executable upload receipt/readiness example.');
 } finally {
   if (server) { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }

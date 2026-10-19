@@ -2,6 +2,8 @@
 
 ## 1.0.1
 
+- Keep request and readiness deadlines active during garbage collection on supported Node versions.
+
 - Support Node.js 22.0 and later.
 - Reject explicitly empty scoped-key permissions before dispatch. Omitted scopes retain server defaults; nonempty selections replace defaults.
 

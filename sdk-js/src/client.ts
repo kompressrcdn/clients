@@ -2,7 +2,7 @@ import { openAsBlob } from 'node:fs';
 import { basename } from 'node:path';
 import { types } from 'node:util';
 import { KompressrError, invalid, invalidResponse } from './errors.js';
-import { delay, Transport } from './transport.js';
+import { createDeadline, delay, Transport } from './transport.js';
 import { assetId, assetState, bulk, customerData, deletionFilter, page, positive, privateUrl, record, upload, uploadAsset, uuid } from './validation.js';
 import { PlatformClient } from './platform.js';
 import type { AssetFilters, AssetState, BulkDeletion, ClientOptions, Page, RequestOptions, UploadAccepted, UploadAsset, UploadFilters, UploadOptions, WaitOptions } from './types.js';
@@ -66,8 +66,8 @@ export class KompressrClient {
     assetId(id);
     const timeout = positive(options.timeoutMs ?? 120_000, 'timeoutMs');
     const interval = positive(options.pollIntervalMs ?? 2_000, 'pollIntervalMs', 30_000);
-    const deadlineSignal = AbortSignal.timeout(timeout);
-    const signal = options.signal ? AbortSignal.any([options.signal, deadlineSignal]) : deadlineSignal;
+    const deadline = createDeadline(timeout, options.signal);
+    const { signal } = deadline;
     const stopped = () => new KompressrError(options.signal?.aborted ? 'Waiting cancelled; resume status checks with the saved asset ID.' : 'Waiting timed out; resume status checks with the saved asset ID.', {
       kind: options.signal?.aborted ? 'cancelled' : 'timeout', code: options.signal?.aborted ? 'WAIT_CANCELLED' : 'WAIT_TIMEOUT', assetId: id,
     });
@@ -88,7 +88,7 @@ export class KompressrClient {
       if (signal.aborted) throw stopped();
       if (error instanceof KompressrError) throw new KompressrError(error.message, { ...error, assetId: id });
       throw error;
-    }
+    } finally { deadline.dispose(); }
   }
   async generatePrivateUrl(id: number, options: RequestOptions & { expiresIn?: number; variant?: 'webp' | 'avif' } = {}) {
     const expires = positive(options.expiresIn ?? 3600, 'expiresIn', 604800);
