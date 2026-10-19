@@ -3,7 +3,7 @@
 ## 2.0.1
 
 - Support Node.js 22.0 and later, including the Smithery bundle.
-- Pin SDK 1.0.1, which rejects explicitly empty scopes when creating upload keys. MCP tools and configuration are unchanged.
+- Use SDK 1.0.1 fixes for empty scoped-key permissions and request/readiness timeouts under garbage collection.
 
 ## 2.0.0
 
