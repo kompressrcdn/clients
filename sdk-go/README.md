@@ -121,6 +121,6 @@ Deletion acceptance means cleanup is scheduled. Inspect `GetAsset` for completio
 go run ./scripts/verify.go
 ```
 
-This builds examples, runs `go vet` and race-enabled tests, creates a module ZIP, and installs it into an isolated consumer through a local file proxy. Tests use synthetic local HTTP servers; they do not prove live plan entitlements or production credentials. See [behavior parity](https://github.com/kompressrcdn/clients/blob/main/sdk-go/PARITY.md), [contributing](https://github.com/kompressrcdn/clients/blob/main/sdk-go/CONTRIBUTING.md) and [releasing](https://github.com/kompressrcdn/clients/blob/main/sdk-go/PUBLISHING.md).
+This builds examples, runs `go vet` and race-enabled tests, creates a module ZIP, and installs it into an isolated consumer through a local file proxy. Tests use synthetic local HTTP servers; they do not prove live plan entitlements or production credentials. See [behavior parity](https://github.com/kompressrcdn/clients/blob/main/sdk-go/PARITY.md) and [contributing](https://github.com/kompressrcdn/clients/blob/main/sdk-go/CONTRIBUTING.md).
 
 [MIT license](https://github.com/kompressrcdn/clients/blob/main/sdk-go/LICENSE). Report bugs in the [clients repository](https://github.com/kompressrcdn/clients/issues); see the repository's [security policy](https://github.com/kompressrcdn/clients/blob/main/SECURITY.md) for private reports.
