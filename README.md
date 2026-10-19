@@ -61,7 +61,7 @@ Ordinary API uploads are included on paid plans, subject to file and usage limit
 
 ## Connect an agent
 
-Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.1` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [Smithery installation walkthrough](smithery/README.md). Maintainers can use the separate [bundle publishing guide](smithery/PUBLISHING.md).
+Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.1` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [Smithery installation walkthrough](smithery/README.md).
 
 ## Develop from source
 
@@ -72,6 +72,6 @@ npm --prefix sdk-js ci --ignore-scripts
 node scripts/verify.mjs
 ```
 
-This command verifies the JS SDK and MCP, checks public source content and the shared contract, and exercises their installed packages using local HTTP fixtures. For another language, use its native verifier or `node scripts/verify-all.mjs` with a language name after installing its development tools. See [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisites and the all-package command, [publishing instructions](PUBLISHING.md) and the [public contract](contracts/README.md). Local verification requires no live account or service checkout.
+This command verifies the JS SDK and MCP, checks public source content and the shared contract, and exercises their installed packages using local HTTP fixtures. For another language, use its native verifier or `node scripts/verify-all.mjs` with a language name after installing its development tools. See [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisites and the all-package command, and the [public contract](contracts/README.md) for API behavior. Local verification requires no live account or service checkout.
 
 Report bugs through [GitHub issues](https://github.com/kompressrcdn/clients/issues). Follow [SECURITY.md](SECURITY.md) for private security reports. Packages are [MIT licensed](LICENSE).

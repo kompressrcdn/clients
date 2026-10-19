@@ -40,4 +40,4 @@ Keep usage examples, public types, response validation and the [shared contract]
 
 All tracked content and release artifacts are public. Use reserved example domains and synthetic identities in tests; use local HTTP servers for integration fixtures. Keep live endpoint overrides, credentials, resource inventories and operational reports outside this repository. `node scripts/check-public-content.mjs` checks the source tree; package verification also checks every shipped file.
 
-See package contribution notes for memory checks and [PUBLISHING.md](PUBLISHING.md) for releases. Report bugs through [issues](https://github.com/kompressrcdn/clients/issues) and security concerns through [SECURITY.md](SECURITY.md).
+See package contribution notes for memory checks. Report bugs through [issues](https://github.com/kompressrcdn/clients/issues) and security concerns through [SECURITY.md](SECURITY.md).
