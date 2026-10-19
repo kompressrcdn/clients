@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kompressr"
+  short_description: "Integrate file optimization, uploads and CDN delivery"
+  default_prompt: "Use $kompressr to choose and implement the right Kompressr integration for my application."

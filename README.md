@@ -31,6 +31,22 @@ Framework independence does not imply browser support, every language version or
 - **Use Claude Desktop or another agent:** [install the MCP extension](smithery/README.md) and try the sample upload prompt.
 - **Build a chatbot with separate users:** [test scoped access, then integrate it](guides/chatbot-integration.md).
 
+## Integrate with an AI coding assistant
+
+The [Kompressr skill](skills/kompressr/SKILL.md) helps your coding assistant choose and implement the right integration for your application. It covers product capabilities, all seven SDKs, custom HTTP integrations for other languages, website URL prepend, private files, scoped keys and troubleshooting. It works independently of the MCP server.
+
+From your application directory, install it for your compatible coding assistant:
+
+```sh
+npx skills add kompressrcdn/clients --skill kompressr
+```
+
+The installer lets you choose an assistant. You can also copy the complete `skills/kompressr` folder into your assistant's documented skills directory. Keep its reference files together. See the [Agent Skills format](https://agentskills.io/specification) and [installer options](https://github.com/vercel-labs/skills).
+
+Run `npx skills list` from the same application directory to confirm installation. Start a new assistant session there and ask it to use the Kompressr skill for your task.
+
+Example requests: “Add private file uploads to my Django app,” “Use Kompressr for my existing website images,” or “Integrate Kompressr in Rust using the HTTP API.” The assistant adapts the guidance to your stack; you still supply your own account/project configuration and keep secrets in your application's secret store.
+
 ## Start with the SDK
 
 1. [Create a Kompressr account](https://kompressr.com/signup) and select a plan with API upload access.
