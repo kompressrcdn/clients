@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Document API image uploads during the 30-day trial, with 100 uploads shared across API and dashboard. SDK runtime behavior is unchanged.
+
 ## 1.0.1
 
 - Keep request and readiness deadlines active during garbage collection on supported Node versions.

@@ -12,7 +12,7 @@ npm install @kompressr/sdk
 
 For source builds, follow [CONTRIBUTING.md](https://github.com/kompressrcdn/clients/blob/main/sdk-js/CONTRIBUTING.md), run `npm pack` in the built package directory and install the resulting tarball in your application.
 
-Requires Node.js 22 or later. Both ESM imports and CommonJS `require` are provided, with TypeScript declarations. Browser, edge, Bun, Deno and React Native support are not certified by this release. API uploads require an eligible paid plan; the free dashboard image trial does not grant API upload access. File formats, sizes and processing options depend on your plan and project.
+Requires Node.js 22 or later. Both ESM imports and CommonJS `require` are provided, with TypeScript declarations. Browser, edge, Bun, Deno and React Native support are not certified by this release. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly. File formats, sizes and processing options depend on your plan and project.
 
 ## First upload
 

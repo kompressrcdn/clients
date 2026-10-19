@@ -1,6 +1,6 @@
 {
   "name": "@kompressr/sdk",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Kompressr file storage, optimization and delivery client for Node.js and TypeScript",
   "type": "module",
   "main": "./dist/cjs/index.js",
