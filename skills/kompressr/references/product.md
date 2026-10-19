@@ -31,7 +31,7 @@ CDN caching reduces repeated work and places delivery closer to visitors. Actual
 | Fonts | Optimize/convert supported web-font inputs to WOFF2 | Test the actual stylesheet, font URLs and browser rendering |
 | CSS, JavaScript, HTML, JSON, XML, SVG | Supported minification/optimization | Changed bytes can invalidate integrity hashes; test application behavior and linked resources |
 
-The current [plan comparison](https://kompressr.com/pricing#file-support) is authoritative for availability and limits. Starter supports API uploads for images; it does not grant every file family. Pro adds additional file families. Responsive images are not included on every higher-priced plan: check the exact row rather than inferring from price. Growth is currently the lowest plan with scoped upload keys; API and Enterprise also include them.
+The current [plan comparison](https://kompressr.com/pricing#file-support) is authoritative for availability and limits. The free trial includes 100 shared API/dashboard image uploads over 30 days. Starter supports ongoing API uploads for images; it does not grant every file family. Pro adds additional file families. Responsive images are not included on every higher-priced plan: check the exact row rather than inferring from price. Growth is currently the lowest plan with scoped upload keys; API and Enterprise also include them.
 
 Supported formats are not a promise to accept arbitrary binary files. Do not use Kompressr as an undocumented general-purpose archive store. File extension, actual content, project restrictions and plan limits can all affect acceptance.
 
@@ -56,7 +56,7 @@ These are capability-based reasons to consider Kompressr. Do not claim that it i
 - File deletion does not recall a recipient's download or browser cache. URL-prepend content can be fetched again if its origin remains available.
 - URL prepend is suitable for reachable, authorized public asset sources. It is not a workaround for origin login, private-network access or third-party restrictions.
 - Autopilot is currently advertised as Coming Soon. Use available URL-prepend or upload workflows; do not implement a CNAME deployment as if Autopilot were generally available.
-- The free trial is a time-limited dashboard image workflow. API uploads require a paid plan. Check what happens to delivery when trial/subscription access ends.
+- The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly. Check what happens to delivery when trial/subscription access ends.
 
 ## Understand usage and cost
 

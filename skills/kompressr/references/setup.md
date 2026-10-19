@@ -35,9 +35,9 @@ Use the package's endpoint option names if custom endpoints are required. A cust
 
 ## Plan selection
 
-Current minimums: Starter for ordinary API image uploads; Growth for per-user scoped upload keys. Pro supports additional file families. API and Enterprise also support scoped keys. File size, resolution, video/PDF limits, responsive images and quotas vary independently. Consult [current pricing](https://kompressr.com/pricing#file-support) for the actual combination before choosing a plan.
+The 30-day free trial includes 100 image uploads shared across API, SDKs, MCP and dashboard, with no monthly renewal. Starter continues ordinary API image uploads after the trial; Growth is the minimum for per-user scoped upload keys. Pro supports additional file families. API and Enterprise also support scoped keys. File size, resolution, video/PDF limits, responsive images and quotas vary independently. Consult [current pricing](https://kompressr.com/pricing#file-support) for the actual combination before choosing a plan.
 
-A free dashboard trial or successful email verification does not grant API upload access. Possessing a key does not override plan, project or scope checks.
+After email verification, an active free trial permits API image uploads within the shared 100-upload allowance. Possessing a key does not override plan, project or scope checks.
 
 ## What your application stores
 

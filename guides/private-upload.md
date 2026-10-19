@@ -2,7 +2,7 @@
 
 This example uploads a file, waits for processing and prints a link you can open in your browser. The link expires after one hour; the file stays stored until you delete it.
 
-You need Node.js 22 or later, a paid Kompressr plan and a project API key. For an ordinary backend upload, get the key from **Dashboard → Projects → API Keys**. For separate chatbot users, first [create a test user's scoped key](chatbot-integration.md#1-create-a-test-user). A scoped key needs `upload`, `status` and `private_url`, and must allow private uploads.
+You need Node.js 22 or later, an active Kompressr trial or paid plan and a project API key. For an ordinary backend upload, get the key from **Dashboard → Projects → API Keys**. For separate chatbot users, first [create a test user's scoped key](chatbot-integration.md#1-create-a-test-user). A scoped key needs `upload`, `status` and `private_url`, and must allow private uploads.
 
 ## 1. Set up a local folder
 

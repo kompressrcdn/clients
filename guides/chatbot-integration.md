@@ -8,7 +8,7 @@ Use the SDK for a shared chatbot backend. Use MCP when an agent application need
 
 ## 1. Create a test user
 
-Your company needs a plan with scoped keys: **Growth, API or Enterprise**. Other paid plans support ordinary API uploads but do not include per-user keys. Check the [plan comparison](https://kompressr.com/pricing#file-support).
+Your company needs a plan with scoped keys: **Growth, API or Enterprise**. The free trial, Starter and Pro support ordinary API uploads but do not include per-user keys. Check the [plan comparison](https://kompressr.com/pricing#file-support).
 
 1. In [Dashboard → Projects](https://kompressr.com/dashboard/projects), create or open a **Platform/AI** project for testing.
 2. Open **Users & Agents**, choose **Add identity** and enter `demo-alice` as the **External identity ID**.

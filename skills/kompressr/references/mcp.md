@@ -13,7 +13,7 @@ Requires Node.js 22+. A typical host configuration supporting `mcpServers` is:
   "mcpServers": {
     "kompressr": {
       "command": "npx",
-      "args": ["-y", "@kompressr/mcp-server@2.0.2"],
+      "args": ["-y", "@kompressr/mcp-server@2.0.3"],
       "env": {
         "KOMPRESSR_API_KEY": "YOUR_SCOPED_API_KEY",
         "KOMPRESSR_PROJECT_ID": "YOUR_PROJECT_UUID"
@@ -33,7 +33,7 @@ Registry identity: `com.kompressr/kompressr`. npm package identity: `@kompressr/
 
 | Tools | Purpose |
 | --- | --- |
-| `register`, `verify_email` | Available account onboarding; verification alone does not grant paid API upload access |
+| `register`, `verify_email` | Account onboarding; verified accounts can upload images within the active free trial or paid-plan limits |
 | `upload_asset` | Upload a supported file; preserve its returned asset ID |
 | `get_asset_status`, `wait_for_asset` | Check/wait for processing before delivery |
 | `list_assets` | List uploads accessible to the configured identity/project |
