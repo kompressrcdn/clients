@@ -39,7 +39,7 @@ jobs:
         run: |
           version="$(node -p 'JSON.parse(require("fs").readFileSync("mcp-server/package.json", "utf8")).version')"
           release_dir="$RUNNER_TEMP/kompressr-mcp-release"
-          tag="mcp-server/v${version}"
+          tag="$(node --input-type=module -e 'import { mcpReleaseTag } from "./scripts/verify-mcp-metadata.mjs"; console.log(mcpReleaseTag(process.argv[1]))' "$version")"
           existing_tag="$(git ls-remote --tags origin "refs/tags/$tag")"
           if [ -n "$existing_tag" ]; then
             printf 'Tag %s already exists; inspect its release before continuing.\n' "$tag" >&2

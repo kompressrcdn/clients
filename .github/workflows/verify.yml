@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: |
-          node --test scripts/public-content.test.mjs
+          node --test scripts/public-content.test.mjs scripts/mcp-release-metadata.test.mjs
           node scripts/check-public-content.mjs
           node scripts/verify-contract.mjs
           npm --prefix sdk-js run verify

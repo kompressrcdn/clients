@@ -5,6 +5,20 @@ import { join } from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
+export function mcpReleaseTag(version) {
+  assert.match(version, /^\d+\.\d+\.\d+$/);
+  return `mcp-server-v${version}`;
+}
+
+export function verifyMcpbReleaseUrl(identifier) {
+  const url = new URL(identifier);
+  assert.equal(url.origin, 'https://github.com');
+  // The registry checks the decoded path and requires a single tag segment.
+  // https://github.com/modelcontextprotocol/registry/blob/main/internal/validators/registries/mcpb.go
+  assert.match(decodeURIComponent(url.pathname), /^\/kompressrcdn\/clients\/releases\/download\/[^/]+\/[^/]+$/,
+    'MCPB release URLs require a tag without slashes, including encoded slashes.');
+}
+
 export function verifyMcpMetadata() {
   const read = path => JSON.parse(readFileSync(join(root, path), 'utf8'));
   const pkg = read('mcp-server/package.json');

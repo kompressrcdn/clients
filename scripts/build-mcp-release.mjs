@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPackedFiles, checkPublicContent, checkPublicPath } from './public-content.mjs';
-import { verifyMcpMetadata } from './verify-mcp-metadata.mjs';
+import { mcpReleaseTag, verifyMcpMetadata, verifyMcpbReleaseUrl } from './verify-mcp-metadata.mjs';
 
 const [destination, ...extra] = process.argv.slice(2);
 assert(destination && extra.length === 0, 'Usage: node scripts/build-mcp-release.mjs empty-output-directory');
@@ -60,10 +60,12 @@ try {
   }
   scan(inspect);
   run(process.execPath, ['smithery/verify.mjs', inspect]);
-  const tag = `mcp-server/v${pkg.version}`;
+  const tag = mcpReleaseTag(pkg.version);
+  const identifier = `${server.repository.url}/releases/download/${encodeURIComponent(tag)}/${filename}`;
+  verifyMcpbReleaseUrl(identifier);
   server.packages.push({
     registryType: 'mcpb',
-    identifier: `${server.repository.url}/releases/download/${encodeURIComponent(tag)}/${filename}`,
+    identifier,
     fileSha256: hash(join(output, filename)),
     transport: { type: 'stdio' },
   });
