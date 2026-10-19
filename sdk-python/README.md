@@ -100,6 +100,6 @@ python -m pip install -e '.[dev]'
 python scripts/verify.py
 ```
 
-Verification typechecks, runs local HTTP tests, builds wheel/source distributions, checks archive contents, installs the wheel in a fresh environment and repeats HTTP tests against that installed package. It uses synthetic credentials and no Kompressr account. See [PUBLISHING.md](https://github.com/kompressrcdn/clients/blob/main/sdk-python/PUBLISHING.md) for maintainer release steps.
+Verification typechecks, runs local HTTP tests, builds wheel/source distributions, checks archive contents, installs the wheel in a fresh environment and repeats HTTP tests against that installed package. It uses synthetic credentials and no Kompressr account.
 
 MIT licensed. Report bugs through the repository's issue tracker and security concerns through [SECURITY.md](https://github.com/kompressrcdn/clients/blob/main/SECURITY.md).

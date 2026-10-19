@@ -61,7 +61,7 @@ def inspect_archive(artifact):
                 content = archive.extractfile(item)
                 assert content is not None
                 inspect_file(item.name, content.read())
-        required = ('README.md', 'API.md', 'PARITY.md', 'PUBLISHING.md', 'tests/test_sdk.py', 'tests/file-lifecycle.json')
+        required = ('README.md', 'API.md', 'PARITY.md', 'tests/test_sdk.py', 'tests/file-lifecycle.json')
         for relative in required:
             if not any(n.endswith('/' + relative) for n in names):
                 raise RuntimeError(f'Source distribution missing {relative}')
