@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "kompressr",
   "display_name": "Kompressr",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Upload, optimize, manage and deliver files with Kompressr.",
-  "long_description": "Upload local files or public file URLs, wait for processing, list uploads, generate expiring private links and permanently delete explicit assets. Requires a Kompressr account with paid API upload access and your own project or scoped API key. The server runs on the MCP client's machine and can read files allowed by that process's operating-system permissions; it does not enforce a directory allowlist. URL uploads download to temporary local storage before uploading to Kompressr. Supply a project UUID to enable upload listing. Account setup tools cannot replace an already configured runtime.",
+  "long_description": "Upload local files or public file URLs, wait for processing, list uploads, generate expiring private links and permanently delete explicit assets. Requires a Kompressr account with an active trial or paid plan and your own project or eligible scoped API key. The 30-day free trial includes 100 image uploads shared across API and dashboard. The server runs on the MCP client's machine and can read files allowed by that process's operating-system permissions; it does not enforce a directory allowlist. URL uploads download to temporary local storage before uploading to Kompressr. Supply a project UUID to enable upload listing. Account setup tools cannot replace an already configured runtime.",
   "author": {
     "name": "Kompressr",
     "url": "https://kompressr.com"
@@ -67,7 +67,7 @@
   "tools": [
     {
       "name": "register",
-      "description": "Create an account and send a verification email. API uploads require a paid plan. Cannot replace an already configured runtime."
+      "description": "Create an account and send a verification email. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly. Cannot replace an already configured runtime."
     },
     {
       "name": "verify_email",
@@ -75,7 +75,7 @@
     },
     {
       "name": "upload_asset",
-      "description": "Upload a supported image, video, PDF, font or text asset. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. API uploads require a paid plan."
+      "description": "Upload a supported image, video, PDF, font or text asset. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly."
     },
     {
       "name": "get_asset_status",
@@ -103,7 +103,7 @@
     },
     {
       "name": "bulk_delete_assets",
-      "description": "Permanently delete 1–100 explicit asset IDs. Inspect each result: a successful HTTP request can contain failed items. Scoped keys require delete permission. No query-based deletion or undo."
+      "description": "Permanently delete 1\u2013100 explicit asset IDs. Inspect each result: a successful HTTP request can contain failed items. Scoped keys require delete permission. No query-based deletion or undo."
     }
   ]
 }

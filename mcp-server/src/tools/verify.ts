@@ -15,12 +15,12 @@ export function verifyEmailTool(server: McpServer, client: KompressrClient, apiU
     try {
       const response = await client.verifyEmail(token);
       if (!response.success) return failure(new KompressrError('Email verification failed. Check the token or sign in at Kompressr.', { kind: 'api', code: 'VERIFICATION_FAILED' }));
-      if (!response.api_key || !response.project_id) return result({ verified: true, configured: false }, 'Email verified, but no project key was issued. Sign in to your Kompressr dashboard to configure a project key. API uploads require a paid plan.');
+      if (!response.api_key || !response.project_id) return result({ verified: true, configured: false }, 'Email verified, but no project key was issued. Sign in to your Kompressr dashboard to configure a project key. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly.');
       // Validate before persistence. A save failure does not leave a configured runtime.
       new SDK({ apiKey: response.api_key, projectId: response.project_id, apiBaseUrl: apiUrl, uploadBaseUrl: client.uploadUrl });
       saveConfig({ api_key: response.api_key, project_id: response.project_id, api_url: apiUrl, upload_url: client.uploadUrl });
       client.setCredentials(response.api_key, response.project_id); onConfigured?.();
-      return result({ verified: true, configured: true }, `Email verified. Credentials saved to ${getConfigPath()}. API and MCP uploads require an eligible paid plan; the free dashboard image trial is available through the website.`);
+      return result({ verified: true, configured: true }, `Email verified. Credentials saved to ${getConfigPath()}. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly.`);
     } catch (error) { return failure(error); }
     finally { verifying = false; }
   });

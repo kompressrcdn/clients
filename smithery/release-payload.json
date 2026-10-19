@@ -4,12 +4,12 @@
   "serverCard": {
     "serverInfo": {
       "name": "kompressr",
-      "version": "2.0.2"
+      "version": "2.0.3"
     },
     "tools": [
       {
         "name": "register",
-        "description": "Create an account and send a verification email. API uploads require a paid plan. Cannot replace an already configured runtime.",
+        "description": "Create an account and send a verification email. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly. Cannot replace an already configured runtime.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -67,7 +67,7 @@
       },
       {
         "name": "upload_asset",
-        "description": "Upload a supported image, video, PDF, font or text asset. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. API uploads require a paid plan.",
+        "description": "Upload a supported image, video, PDF, font or text asset. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -411,7 +411,7 @@
       },
       {
         "name": "bulk_delete_assets",
-        "description": "Permanently delete 1–100 explicit asset IDs. Inspect each result: a successful HTTP request can contain failed items. Scoped keys require delete permission. No query-based deletion or undo.",
+        "description": "Permanently delete 1\u2013100 explicit asset IDs. Inspect each result: a successful HTTP request can contain failed items. Scoped keys require delete permission. No query-based deletion or undo.",
         "inputSchema": {
           "type": "object",
           "properties": {

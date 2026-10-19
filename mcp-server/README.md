@@ -6,7 +6,7 @@ Requires Node.js 22 or later. For a desktop client that supports MCPB extensions
 
 ## Setup
 
-[Create a Kompressr account](https://kompressr.com/signup) and select a plan with API upload access. In [Dashboard → Projects](https://kompressr.com/dashboard/projects), open the project and choose **API Keys**. Keep project/master keys on trusted machines; use scoped keys for individual application or agent runtimes. The project UUID is needed only for listing uploads.
+[Create a Kompressr account](https://kompressr.com/signup) and start the 30-day image-upload trial or choose a paid plan. In [Dashboard → Projects](https://kompressr.com/dashboard/projects), open the project and choose **API Keys**. Keep project/master keys on trusted machines; use scoped keys for individual application or agent runtimes. The project UUID is needed only for listing uploads.
 
 Configure an MCP client to run the package:
 
@@ -15,7 +15,7 @@ Configure an MCP client to run the package:
   "mcpServers": {
     "kompressr": {
       "command": "npx",
-      "args": ["-y", "@kompressr/mcp-server@2.0.2"],
+      "args": ["-y", "@kompressr/mcp-server@2.0.3"],
       "env": {
         "KOMPRESSR_API_KEY": "YOUR_PROJECT_OR_SCOPED_KEY",
         "KOMPRESSR_PROJECT_ID": "YOUR_PROJECT_UUID"
@@ -59,7 +59,7 @@ Environment settings override saved values. A different environment key does not
 3. Share a public processed URL, or authorize the private recipient in your app and call `generate_private_url` for a fresh expiring link.
 4. On wait timeout, resume with the saved ID. Do not upload again to recover from a polling timeout.
 
-API uploads require an eligible paid plan. The free dashboard image trial does not grant API/MCP upload access. Formats, size, video quality and private delivery remain plan/project dependent. The SDK sends all multipart options before the file, as required by the streaming API.
+The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly. Formats, size, video quality and private delivery remain plan/project dependent. The SDK sends all multipart options before the file, as required by the streaming API.
 
 ## Tools
 
@@ -78,7 +78,7 @@ All file tools return readable text, a JSON text block and `structuredContent`; 
 | `delete_asset` | `asset_id`; permanent deletion, no undo/cancellation. Acceptance starts background cleanup. Requires deletion permission. |
 | `bulk_delete_assets` | `asset_ids` (1–100 explicit numeric IDs); per-item outcomes and counts. HTTP success can contain failed items. No delete-all selection. |
 | `register` | `email`, `password` (minimum 8 characters); creates an account and sends verification email. Refuses a configured runtime. |
-| `verify_email` | `token`; verifies email and saves credentials if issued. Refuses a configured runtime; never returns raw keys in tool output. Paid API access still required. |
+| `verify_email` | `token`; verifies email and saves credentials if issued. Refuses a configured runtime; never returns raw keys in tool output. Trial or paid-plan limits still apply. |
 
 Processing status and deletion status are separate. Permanent deletion removes files later; cached, downloaded and offline copies may remain. Retrying the same old ID cannot delete a replacement with a new ID. Bulk deletion preserves partial failure and does not automatically expand or retry a selection. `storage_credited_mb` is recorded storage credit in MB, not a cash refund. Other size fields are bytes.
 

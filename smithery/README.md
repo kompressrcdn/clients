@@ -6,7 +6,7 @@ Download the `.mcpb` desktop extension from [Kompressr GitHub Releases](https://
 
 ## Before you start
 
-- A Kompressr account with a paid plan and an API key from **Dashboard → Projects → API Keys**. For an individual agent, you can use a [scoped key](../guides/chatbot-integration.md#1-create-a-test-user) instead.
+- A Kompressr account with an active trial or paid plan and an API key from **Dashboard → Projects → API Keys**. For an individual agent, you can use a [scoped key](../guides/chatbot-integration.md#1-create-a-test-user) instead.
 - The UUID of the **same project as the key**, shown on its API Keys page. Listing requires it; upload, status and signing do not.
 - A current Claude Desktop installation. This bundle requires Node.js **22+**. Claude Desktop supplies a Node runtime; for another client that does not, install Node.js 22 or later.
 

@@ -1,5 +1,5 @@
 import { KompressrError } from '@kompressr/sdk';
-export const NOT_CONFIGURED = 'Set KOMPRESSR_API_KEY (project or scoped key) or use register and verify_email. API uploads require a paid plan. KOMPRESSR_PROJECT_ID is also required for upload listing.';
+export const NOT_CONFIGURED = 'Set KOMPRESSR_API_KEY (project or scoped key) or use register and verify_email. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly. KOMPRESSR_PROJECT_ID is also required for upload listing.';
 export function result(data: Record<string, unknown>, text: string) {
   return { content: [{ type: 'text' as const, text }, { type: 'text' as const, text: JSON.stringify(data) }], structuredContent: data };
 }

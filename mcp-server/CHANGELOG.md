@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3
+
+- Explain the shared 100-upload, 30-day image trial in onboarding and tool descriptions. Use SDK 1.0.2 documentation updates; file operations and permissions remain enforced by the API.
+
 ## 2.0.2
 
 - Add official MCP Registry metadata and downloadable desktop bundles through GitHub Releases.

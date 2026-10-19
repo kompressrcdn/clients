@@ -6,7 +6,7 @@ import { failure, NOT_CONFIGURED, result } from './result.js';
 import { KompressrError } from '@kompressr/sdk';
 
 export function uploadAssetTool(server: McpServer, client: KompressrClient, isConfigured: () => boolean): void {
-  server.tool('upload_asset', 'Upload a supported image, video, PDF, font or text asset. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. API uploads require a paid plan.', {
+  server.tool('upload_asset', 'Upload a supported image, video, PDF, font or text asset. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly.', {
     file_path: z.string().optional().describe('Local file path; provide exactly one file source'),
     file_url: z.string().url().optional().describe('HTTP(S) file downloaded on the MCP machine, then uploaded'),
     quality: z.enum(VALID_QUALITIES).optional().describe('Video quality only; availability depends on the plan'),

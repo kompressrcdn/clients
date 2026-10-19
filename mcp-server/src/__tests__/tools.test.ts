@@ -25,7 +25,7 @@ describe('MCP protocol schemas, annotations and workflow', () => {
     expect(tools.map(x => x.name).sort()).toEqual(['register', 'verify_email', 'upload_asset', 'get_asset_status', 'list_assets', 'generate_private_url', 'wait_for_asset', 'get_asset_deletion_status', 'delete_asset', 'bulk_delete_assets'].sort());
     expect(tools.find(x => x.name === 'delete_asset')?.annotations).toMatchObject({ destructiveHint: true, readOnlyHint: false, idempotentHint: true });
     expect(tools.find(x => x.name === 'get_asset_status')?.annotations?.readOnlyHint).toBe(true);
-    expect(client.getServerVersion()?.version).toBe('2.0.2');
+    expect(client.getServerVersion()?.version).toBe('2.0.3');
   });
   it('returns structured acceptance without marking a pending URL ready, then current processed status', async () => {
     const { adapter, client } = await connected();
@@ -67,7 +67,7 @@ describe('MCP protocol schemas, annotations and workflow', () => {
     expect(register).not.toHaveBeenCalled(); expect(verify).not.toHaveBeenCalled();
     const fresh = await connected(false);
     const response = await fresh.client.callTool({ name: 'upload_asset', arguments: { file_path: '/fixture' } });
-    expect(response.isError).toBe(true); expect(JSON.stringify(response)).toContain('paid plan');
+    expect(response.isError).toBe(true); expect(JSON.stringify(response)).toContain('100 image uploads');
   });
   it('does not expose an arbitrary thrown credential or private URL', async () => {
     const { adapter, client } = await connected(); vi.spyOn(adapter, 'getStatus').mockRejectedValue(new Error('secret-key https://private.example?s=secret'));
@@ -96,14 +96,14 @@ it('stops SDK waiting when the MCP client cancels its request', async () => {
 });
 
 
-it('saves a newly verified credential without exposing the key or promising free API access', async () => {
+it('saves a newly verified credential without exposing the key and explains the shared trial', async () => {
   const { adapter, client } = await connected(false);
   vi.spyOn(adapter, 'verifyEmail').mockResolvedValue({ success: true, api_key: 'one-time-secret', project_id: '660e8400-e29b-41d4-a716-446655440001' });
   const response = await client.callTool({ name: 'verify_email', arguments: { token: 'fixture-token' } });
   expect(response.structuredContent).toMatchObject({ configured: true, verified: true });
   expect(saveConfig).toHaveBeenCalledWith(expect.objectContaining({ api_key: 'one-time-secret', upload_url: 'https://uploads.kompressr.com' }));
   expect(adapter.isConfigured()).toBe(true);
-  expect(JSON.stringify(response)).toContain('paid plan'); expect(JSON.stringify(response)).not.toContain('one-time-secret');
+  expect(JSON.stringify(response)).toContain('100 image uploads'); expect(JSON.stringify(response)).not.toContain('one-time-secret');
 });
 it('allows only one in-flight verification to configure a runtime', async () => {
   const { adapter, client } = await connected(false);
