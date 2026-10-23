@@ -24,10 +24,10 @@ test('rejects machine paths and private record/configuration files', () => {
 // Package build directories are excluded narrowly, without hiding source files.
 import { isGeneratedDirectory } from './source-paths.mjs';
 test('scopes native build and dependency exclusions to their package', () => {
-  for (const path of ['sdk-python/.venv', 'sdk-python/src/pkg/__pycache__', 'sdk-python/src/pkg.egg-info', 'sdk-java/target', 'sdk-dotnet/src/Client/obj', 'sdk-php/vendor', 'sdk-ruby/vendor', 'sdk-ruby/.bundle', 'sdk-ruby/pkg', 'sdk-ruby/coverage']) {
+  for (const path of ['scripts/release/__pycache__', 'sdk-python/.venv', 'sdk-python/src/pkg/__pycache__', 'sdk-python/src/pkg.egg-info', 'sdk-java/target', 'sdk-dotnet/src/Client/obj', 'sdk-php/vendor', 'sdk-ruby/vendor', 'sdk-ruby/.bundle', 'sdk-ruby/pkg', 'sdk-ruby/coverage']) {
     assert.equal(isGeneratedDirectory(path), true, path);
   }
-  for (const path of ['contracts/target', 'sdk-go/bin', 'sdk-python/src', 'sdk-java/src', 'sdk-dotnet/tests', 'sdk-php/src', 'sdk-php/vendor-helper', 'sdk-ruby/lib', 'sdk-ruby/test', 'sdk-ruby/vendor-helper', 'contracts/pkg']) {
+  for (const path of ['scripts/release/release.py', 'scripts/release/test_release.py', 'scripts/other/__pycache__', 'contracts/target', 'sdk-go/bin', 'sdk-python/src', 'sdk-java/src', 'sdk-dotnet/tests', 'sdk-php/src', 'sdk-php/vendor-helper', 'sdk-ruby/lib', 'sdk-ruby/test', 'sdk-ruby/vendor-helper', 'contracts/pkg']) {
     assert.equal(isGeneratedDirectory(path), false, path);
   }
 });

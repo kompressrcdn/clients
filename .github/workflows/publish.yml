@@ -1,0 +1,661 @@
+name: Publish clients
+
+on:
+  workflow_run:
+    workflows: [Verify clients]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Optional full main commit SHA to resume a retained release'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# Serialize publishers; each package has independent build, publish and consumer jobs.
+concurrency:
+  group: clients-publication
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: >-
+      github.repository == 'kompressrcdn/clients' && github.ref == 'refs/heads/main' &&
+      vars.RELEASE_AUTOMATION_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      attestations: read
+      contents: read
+    outputs:
+      sha: ${{ steps.plan.outputs.sha }}
+      sdk: ${{ steps.plan.outputs.sdk }}
+      mcp: ${{ steps.plan.outputs.mcp }}
+      packages: ${{ steps.plan.outputs.packages }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.14'
+      - id: plan
+        name: Validate successful main CI and select unpublished versions
+        run: python scripts/release/release.py plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PACKAGES: ${{ vars.RELEASE_PACKAGES }}
+
+  sdk-build:
+    needs: [plan]
+    if: needs.plan.outputs.sdk == 'true'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: sdk-js
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: build
+
+  sdk-publish:
+    needs: [plan, sdk-build]
+    if: always() && needs.plan.result == 'success' && needs.sdk-build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: sdk-js
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-publish
+        with:
+          package: sdk-js
+          sha: ${{ needs.plan.outputs.sha }}
+          artifact-id: ${{ needs.sdk-build.outputs.artifact-id }}
+
+  sdk-consumer:
+    needs: [plan, sdk-publish]
+    if: always() && needs.plan.result == 'success' && needs.sdk-publish.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: sdk-js
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: consume
+
+  sdk:
+    needs: [plan, sdk-consumer]
+    if: always() && needs.plan.result == 'success' && needs.sdk-consumer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: sdk-js
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-finish
+        with:
+          package: sdk-js
+          sha: ${{ needs.plan.outputs.sha }}
+
+  mcp-build:
+    needs: [plan, sdk]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.mcp == 'true' && (needs.sdk.result == 'success' || needs.sdk.result == 'skipped')
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: mcp-server
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: build
+
+  mcp-publish:
+    needs: [plan, mcp-build]
+    if: always() && needs.plan.result == 'success' && needs.mcp-build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: mcp-server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-publish
+        with:
+          package: mcp-server
+          sha: ${{ needs.plan.outputs.sha }}
+          artifact-id: ${{ needs.mcp-build.outputs.artifact-id }}
+
+  mcp-consumer:
+    needs: [plan, mcp-publish]
+    if: always() && needs.plan.result == 'success' && needs.mcp-publish.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: mcp-server
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: consume
+
+  mcp:
+    needs: [plan, mcp-consumer]
+    if: always() && needs.plan.result == 'success' && needs.mcp-consumer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: mcp-server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-finish
+        with:
+          package: mcp-server
+          sha: ${{ needs.plan.outputs.sha }}
+          mcp-key: ${{ secrets.MCP_REGISTRY_PRIVATE_KEY }}
+
+  python-build:
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.packages), 'python')
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: python
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: build
+
+  python-publish:
+    needs: [plan, python-build]
+    if: always() && needs.plan.result == 'success' && needs.python-build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-publish
+        with:
+          package: python
+          sha: ${{ needs.plan.outputs.sha }}
+          artifact-id: ${{ needs.python-build.outputs.artifact-id }}
+
+  python-consumer:
+    needs: [plan, python-publish]
+    if: always() && needs.plan.result == 'success' && needs.python-publish.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: python
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: consume
+
+  python:
+    needs: [plan, python-consumer]
+    if: always() && needs.plan.result == 'success' && needs.python-consumer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-finish
+        with:
+          package: python
+          sha: ${{ needs.plan.outputs.sha }}
+
+  go-build:
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.packages), 'go')
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: go
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: build
+
+  go-publish:
+    needs: [plan, go-build]
+    if: always() && needs.plan.result == 'success' && needs.go-build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: go
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-publish
+        with:
+          package: go
+          sha: ${{ needs.plan.outputs.sha }}
+          artifact-id: ${{ needs.go-build.outputs.artifact-id }}
+
+  go-consumer:
+    needs: [plan, go-publish]
+    if: always() && needs.plan.result == 'success' && needs.go-publish.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: go
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: consume
+
+  go:
+    needs: [plan, go-consumer]
+    if: always() && needs.plan.result == 'success' && needs.go-consumer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: go
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-finish
+        with:
+          package: go
+          sha: ${{ needs.plan.outputs.sha }}
+
+  java-build:
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.packages), 'java')
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: java
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: build
+
+  java-publish:
+    needs: [plan, java-build]
+    if: always() && needs.plan.result == 'success' && needs.java-build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: java
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-publish
+        with:
+          package: java
+          sha: ${{ needs.plan.outputs.sha }}
+          artifact-id: ${{ needs.java-build.outputs.artifact-id }}
+          gpg-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+          gpg-fingerprint: ${{ vars.MAVEN_GPG_FINGERPRINT }}
+          central-username: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          central-password: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+
+  java-consumer:
+    needs: [plan, java-publish]
+    if: always() && needs.plan.result == 'success' && needs.java-publish.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: java
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: consume
+
+  java:
+    needs: [plan, java-consumer]
+    if: always() && needs.plan.result == 'success' && needs.java-consumer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: java
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-finish
+        with:
+          package: java
+          sha: ${{ needs.plan.outputs.sha }}
+
+  dotnet-build:
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.packages), 'dotnet')
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: dotnet
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: build
+
+  dotnet-publish:
+    needs: [plan, dotnet-build]
+    if: always() && needs.plan.result == 'success' && needs.dotnet-build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: dotnet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-publish
+        with:
+          package: dotnet
+          sha: ${{ needs.plan.outputs.sha }}
+          artifact-id: ${{ needs.dotnet-build.outputs.artifact-id }}
+          nuget-user: ${{ vars.NUGET_USER }}
+
+  dotnet-consumer:
+    needs: [plan, dotnet-publish]
+    if: always() && needs.plan.result == 'success' && needs.dotnet-publish.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: dotnet
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: consume
+
+  dotnet:
+    needs: [plan, dotnet-consumer]
+    if: always() && needs.plan.result == 'success' && needs.dotnet-consumer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: dotnet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-finish
+        with:
+          package: dotnet
+          sha: ${{ needs.plan.outputs.sha }}
+
+  php-build:
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.packages), 'php')
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: php
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: build
+
+  php-publish:
+    needs: [plan, php-build]
+    if: always() && needs.plan.result == 'success' && needs.php-build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: php
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-publish
+        with:
+          package: php
+          sha: ${{ needs.plan.outputs.sha }}
+          artifact-id: ${{ needs.php-build.outputs.artifact-id }}
+          php-token: ${{ secrets.PHP_MIRROR_TOKEN }}
+
+  php-consumer:
+    needs: [plan, php-publish]
+    if: always() && needs.plan.result == 'success' && needs.php-publish.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: php
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: consume
+
+  php:
+    needs: [plan, php-consumer]
+    if: always() && needs.plan.result == 'success' && needs.php-consumer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: php
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-finish
+        with:
+          package: php
+          sha: ${{ needs.plan.outputs.sha }}
+
+  ruby-build:
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.packages), 'ruby')
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: ruby
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: build
+
+  ruby-publish:
+    needs: [plan, ruby-build]
+    if: always() && needs.plan.result == 'success' && needs.ruby-build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: ruby
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-publish
+        with:
+          package: ruby
+          sha: ${{ needs.plan.outputs.sha }}
+          artifact-id: ${{ needs.ruby-build.outputs.artifact-id }}
+
+  ruby-consumer:
+    needs: [plan, ruby-publish]
+    if: always() && needs.plan.result == 'success' && needs.ruby-publish.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    uses: ./.github/workflows/release-check.yml
+    with:
+      package: ruby
+      sha: ${{ needs.plan.outputs.sha }}
+      phase: consume
+
+  ruby:
+    needs: [plan, ruby-consumer]
+    if: always() && needs.plan.result == 'success' && needs.ruby-consumer.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: ruby
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: ./automation/.github/actions/release-finish
+        with:
+          package: ruby
+          sha: ${{ needs.plan.outputs.sha }}

@@ -154,3 +154,15 @@ jobs:
           working-directory: sdk-ruby
           bundler-cache: true
       - run: node scripts/verify-all.mjs ruby
+
+  release-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.14'
+      - run: python -m unittest discover -s scripts/release -p 'test_*.py' -v
+      - run: python scripts/release/release.py versions

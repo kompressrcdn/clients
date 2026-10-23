@@ -1,0 +1,102 @@
+name: Check release package
+on:
+  workflow_call:
+    inputs:
+      package:
+        type: string
+        required: true
+      sha:
+        type: string
+        required: true
+      phase:
+        type: string
+        required: true
+    outputs:
+      artifact-id:
+        value: ${{ jobs.check.outputs.artifact-id }}
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+jobs:
+  check:
+    if: github.repository == 'kompressrcdn/clients' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    env:
+      RELEASE_SOURCE: ${{ github.workspace }}/source
+      RELEASE_DIR: ${{ github.workspace }}/release-artifacts
+      PACKAGE: ${{ inputs.package }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: automation
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.sha }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.14'
+      - id: inspect
+        name: Authenticate retained files or select a new build
+        run: python automation/scripts/release/release.py inspect "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        if: inputs.package == 'go'
+        with:
+          go-version: '1.24.x'
+          cache: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        if: inputs.package == 'java'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        if: inputs.package == 'dotnet'
+        with:
+          dotnet-version: '8.0.x'
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962
+        if: inputs.package == 'php'
+        with:
+          php-version: '8.1'
+          extensions: curl
+          tools: composer:v2
+          coverage: none
+      - uses: ruby/setup-ruby@e1bd6146574da5e0795075b5319b300edb30c5b0
+        if: inputs.package == 'ruby'
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+      - name: Install build dependencies
+        if: inputs.phase == 'build' && steps.inspect.outputs.resume == 'false'
+        shell: bash
+        run: |
+          if [ "$PACKAGE" = python ]; then python -m pip install -e './source/sdk-python[dev]'; fi
+          if [ "$PACKAGE" = ruby ]; then cd source/sdk-ruby && bundle install; fi
+      - name: Build and verify without publishing permissions
+        if: inputs.phase == 'build' && steps.inspect.outputs.resume == 'false'
+        run: python automation/scripts/release/release.py build_candidate "$PACKAGE" "$RELEASE_DIR"
+      - name: Check the installed public package without publishing permissions
+        if: inputs.phase == 'consume'
+        run: python automation/scripts/release/release.py consume "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        id: upload
+        if: inputs.phase == 'build'
+        with:
+          name: candidate-${{ inputs.package }}-${{ github.run_attempt }}
+          path: ${{ env.RELEASE_DIR }}/*
+          if-no-files-found: error
+          retention-days: 7

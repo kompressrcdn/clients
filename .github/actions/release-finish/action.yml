@@ -1,0 +1,61 @@
+name: Complete checked release
+description: Authenticate consumer completion before exposing release assets.
+inputs:
+  package:
+    required: true
+    description: Package key
+  sha:
+    required: true
+    description: Verified source commit
+  mcp-key:
+    default: ''
+    description: MCP Registry domain key
+runs:
+  using: composite
+  steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.sha }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.14'
+      - name: Authenticate retained release
+        shell: bash
+        run: python automation/scripts/release/release.py inspect "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - id: receipt
+        name: Record the successful isolated consumer job
+        shell: bash
+        run: python automation/scripts/release/release.py receipt "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        id: attest
+        if: steps.receipt.outputs.fresh == 'true'
+        with:
+          subject-path: ${{ env.RELEASE_DIR }}/published.json
+      - name: Keep signed completion receipt
+        if: steps.receipt.outputs.fresh == 'true'
+        shell: bash
+        run: cp "$BUNDLE" "$RELEASE_DIR/published.intoto.jsonl"
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+      - name: Install pinned MCP Registry publisher
+        if: inputs.package == 'mcp-server'
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/mcp-publisher.tar.gz" https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+          printf '%s  %s\n' 'a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc' "$RUNNER_TEMP/mcp-publisher.tar.gz" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/mcp-bin"
+          tar -xzf "$RUNNER_TEMP/mcp-publisher.tar.gz" -C "$RUNNER_TEMP/mcp-bin" mcp-publisher
+          echo "$RUNNER_TEMP/mcp-bin" >> "$GITHUB_PATH"
+      - name: Complete GitHub release and MCP registration
+        shell: bash
+        run: python automation/scripts/release/release.py finish "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MCP_REGISTRY_PRIVATE_KEY: ${{ inputs.mcp-key }}
