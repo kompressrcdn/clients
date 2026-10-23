@@ -322,6 +322,17 @@ class ReleaseTests(unittest.TestCase):
                 r.inspect('sdk-js', target)
             registry.assert_not_called()
 
+    def test_required_gate_rejects_failed_skipped_and_cancelled_jobs(self):
+        import subprocess
+        import sys
+        import textwrap
+        workflow = (r.CONTROL_ROOT / '.github/workflows/verify.yml').read_text()
+        script = textwrap.dedent(workflow.split("python3 - <<'PYTHON'\n", 1)[1].split('          PYTHON\n', 1)[0])
+        for result in ('success', 'failure', 'skipped', 'cancelled'):
+            env = {**r.consumer_environment(), 'CHECK_RESULTS': json.dumps({'verify': {'result': 'success'}, 'python': {'result': result}})}
+            completed = subprocess.run([sys.executable, '-c', script], env=env, capture_output=True, text=True)
+            self.assertEqual(completed.returncode == 0, result == 'success')
+
     def test_workflow_permissions_and_job_order(self):
         workflow = (r.CONTROL_ROOT / '.github/workflows/publish.yml').read_text()
         check = (r.CONTROL_ROOT / '.github/workflows/release-check.yml').read_text()
