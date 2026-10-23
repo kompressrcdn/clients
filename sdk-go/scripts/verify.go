@@ -13,10 +13,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	kompressr "github.com/kompressrcdn/clients/sdk-go"
 )
 
 const module = "github.com/kompressrcdn/clients/sdk-go"
-const version = "v0.1.0"
+const version = "v" + kompressr.Version
 
 func must(err error) {
 	if err != nil {
