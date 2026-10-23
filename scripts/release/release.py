@@ -175,7 +175,6 @@ def validate_run(value, sha):
 
 def repository_controls():
     require(github('branches/main')['protected'], 'Protect main before enabling publication')
-    require(github('immutable-releases')['enabled'], 'Enable immutable GitHub releases before publication')
     # Reserve tags must survive deletion of a mutable draft. Protect all version
     # tags against updates and deletions, while allowing Actions to create tags.
     rulesets = github('rulesets?per_page=100')
@@ -221,6 +220,7 @@ def plan():
                 directory = Path(temp)
                 record = download(key, version, directory)
                 if complete(directory, record) and not rel['draft']:
+                    require(rel.get('immutable') is True, 'Published GitHub release must be immutable')
                     verify_public(key, directory, record)
                     if key != 'mcp-server' or mcp_matches(directory, record) is not None:
                         continue
@@ -688,6 +688,9 @@ def finish(key, directory):
             gh('release', 'upload', tag(key, version), str(directory / 'published.json'))
     if release(key, version)['draft']:
         gh('release', 'edit', tag(key, version), '--draft=false', '--latest=false')
+    # The settings endpoint requires Administration:read, which GITHUB_TOKEN
+    # deliberately lacks. Check the public release property instead.
+    require(release(key, version).get('immutable') is True, 'GitHub release is not immutable; stop and reconcile before registry admission')
     if key == 'mcp-server':
         mcp_registry(directory, record)
     print(f'Published and checked {key} {version} from {record["sha"]}')

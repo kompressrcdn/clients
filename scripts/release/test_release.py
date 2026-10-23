@@ -221,7 +221,7 @@ class ReleaseTests(unittest.TestCase):
         self.retained('mcp-server')
         self.record['version'] = '2.0.3'
         r.write_json(self.directory / 'release.json', self.record)
-        with patch.object(r, 'versions', return_value={'mcp-server': '2.0.3'}), patch.object(r, 'run', return_value=self.sha), patch.object(r, 'release', return_value={'draft': True}), patch.object(r, 'authenticated', return_value=self.record), patch.object(r, 'complete', return_value=True), patch.object(r, 'download') as download, patch.object(r.Path, 'read_bytes', return_value=b'record'), patch.object(r, 'gh') as gh, patch.object(r, 'mcp_registry', side_effect=RuntimeError('unavailable')):
+        with patch.object(r, 'versions', return_value={'mcp-server': '2.0.3'}), patch.object(r, 'run', return_value=self.sha), patch.object(r, 'release', return_value={'draft': True, 'immutable': True}), patch.object(r, 'authenticated', return_value=self.record), patch.object(r, 'complete', return_value=True), patch.object(r, 'download') as download, patch.object(r.Path, 'read_bytes', return_value=b'record'), patch.object(r, 'gh') as gh, patch.object(r, 'mcp_registry', side_effect=RuntimeError('unavailable')):
             with self.assertRaises(RuntimeError):
                 r.finish('mcp-server', self.directory)
             gh.assert_called_once()  # Assets must be public before registry admission.
@@ -276,8 +276,17 @@ class ReleaseTests(unittest.TestCase):
         self.retained()
         def download(key, version, directory):
             (directory / 'release.json').write_bytes((self.directory / 'release.json').read_bytes())
-        with patch.object(r, 'authenticated', return_value=self.record), patch.object(r, 'complete', return_value=True), patch.object(r, 'download', side_effect=download), patch.object(r, 'release', return_value={'draft': False}), patch.object(r, 'gh') as gh:
+        with patch.object(r, 'authenticated', return_value=self.record), patch.object(r, 'complete', return_value=True), patch.object(r, 'download', side_effect=download), patch.object(r, 'release', return_value={'draft': False, 'immutable': True}), patch.object(r, 'gh') as gh:
             r.finish('sdk-js', self.directory)
+            gh.assert_not_called()
+
+    def test_mutable_public_release_cannot_finish(self):
+        self.retained()
+        def download(key, version, directory):
+            (directory / 'release.json').write_bytes((self.directory / 'release.json').read_bytes())
+        with patch.object(r, 'authenticated', return_value=self.record), patch.object(r, 'complete', return_value=True), patch.object(r, 'download', side_effect=download), patch.object(r, 'release', return_value={'draft': False, 'immutable': False}), patch.object(r, 'gh') as gh:
+            with self.assertRaisesRegex(RuntimeError, 'not immutable'):
+                r.finish('sdk-js', self.directory)
             gh.assert_not_called()
 
     def test_partial_completion_signature_is_reused(self):
@@ -293,11 +302,10 @@ class ReleaseTests(unittest.TestCase):
         tag_rule = {'id': 1, 'target': 'tag', 'enforcement': 'active'}
         protected = {'conditions': {'ref_name': {'include': ['~ALL'], 'exclude': []}},
                      'rules': [{'type': 'update'}, {'type': 'deletion'}]}
-        with patch.object(r, 'github', side_effect=[{'protected': True}, {'enabled': True}, [tag_rule], protected]):
+        with patch.object(r, 'github', side_effect=[{'protected': True}, [tag_rule], protected]):
             r.repository_controls()
-        for answers in ([{'protected': False}], [{'protected': True}, {'enabled': False}],
-                        [{'protected': True}, {'enabled': True}, []],
-                        [{'protected': True}, {'enabled': True}, [tag_rule], {**protected, 'rules': [{'type': 'deletion'}]}]):
+        for answers in ([{'protected': False}], [{'protected': True}, []],
+                        [{'protected': True}, [tag_rule], {**protected, 'rules': [{'type': 'deletion'}]}]):
             with self.subTest(answers=answers), patch.object(r, 'github', side_effect=answers), self.assertRaises(RuntimeError):
                 r.repository_controls()
 

@@ -166,3 +166,20 @@ jobs:
           python-version: '3.14'
       - run: python -m unittest discover -s scripts/release -p 'test_*.py' -v
       - run: python scripts/release/release.py versions
+
+  release-gate:
+    if: always()
+    needs: [verify, python, go, java, dotnet, php, ruby, release-tools]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every verification job to pass
+        env:
+          CHECK_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os
+          results = json.loads(os.environ['CHECK_RESULTS'])
+          failed = {name: job['result'] for name, job in results.items() if job['result'] != 'success'}
+          if failed:
+              raise SystemExit(f'Verification did not pass: {failed}')
+          PYTHON
