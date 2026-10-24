@@ -24,3 +24,5 @@ sdk-ruby/.bundle/
 sdk-ruby/vendor/
 sdk-ruby/pkg/
 sdk-ruby/coverage/
+
+scripts/release/__pycache__/

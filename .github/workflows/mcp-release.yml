@@ -1,56 +1,27 @@
 name: Prepare MCP release
-
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-
-concurrency:
-  group: prepare-mcp-release
-  cancel-in-progress: false
-
 jobs:
   prepare:
+    if: github.repository == 'kompressrcdn/clients' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            sdk-js/package-lock.json
-            mcp-server/package-lock.json
-      - name: Install verification dependencies
-        run: npm --prefix sdk-js ci --ignore-scripts
-      - name: Verify SDK and MCP packages
-        run: node scripts/verify.mjs
-      - name: Build and inspect release files
-        run: node scripts/build-mcp-release.mjs "$RUNNER_TEMP/kompressr-mcp-release"
-      - name: Create draft GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          version="$(node -p 'JSON.parse(require("fs").readFileSync("mcp-server/package.json", "utf8")).version')"
-          release_dir="$RUNNER_TEMP/kompressr-mcp-release"
-          tag="$(node --input-type=module -e 'import { mcpReleaseTag } from "./scripts/verify-mcp-metadata.mjs"; console.log(mcpReleaseTag(process.argv[1]))' "$version")"
-          existing_tag="$(git ls-remote --tags origin "refs/tags/$tag")"
-          if [ -n "$existing_tag" ]; then
-            printf 'Tag %s already exists; inspect its release before continuing.\n' "$tag" >&2
-            exit 1
-          fi
-          gh release create "$tag" \
-            "$release_dir/kompressr-mcp-server-${version}.tgz" \
-            "$release_dir/kompressr-${version}.mcpb" \
-            "$release_dir/server.json" \
-            "$release_dir/SHA256SUMS" \
-            "$release_dir/RELEASE_NOTES.md" \
-            --draft --latest=false --target "$GITHUB_SHA" \
-            --title "Kompressr MCP ${version}" \
-            --notes-file "$release_dir/RELEASE_NOTES.md"
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm --prefix sdk-js ci --ignore-scripts
+      - run: node scripts/verify.mjs
+      - run: node scripts/build-mcp-release.mjs "$RUNNER_TEMP/kompressr-mcp-release"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: mcp-release-preview-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kompressr-mcp-release/*
+          if-no-files-found: error
+          retention-days: 7

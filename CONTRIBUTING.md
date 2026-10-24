@@ -41,3 +41,12 @@ Keep usage examples, public types, response validation and the [shared contract]
 All tracked content and release artifacts are public. Use reserved example domains and synthetic identities in tests; use local HTTP servers for integration fixtures. Keep live endpoint overrides, credentials, resource inventories and operational reports outside this repository. `node scripts/check-public-content.mjs` checks the source tree; package verification also checks every shipped file.
 
 See package contribution notes for memory checks. Report bugs through [issues](https://github.com/kompressrcdn/clients/issues) and security concerns through [SECURITY.md](SECURITY.md).
+
+Release tooling changes can be checked without registry credentials or publication:
+
+```sh
+python3 -m unittest discover -s scripts/release -p 'test_*.py' -v
+python3 scripts/release/release.py versions
+```
+
+These checks require Python 3.11 or newer. They exercise version consistency, CI provenance, retained artifacts and partial-publication recovery using fixtures. Workflow changes should also pass `actionlint`.

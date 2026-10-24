@@ -1,0 +1,145 @@
+name: Publish authenticated package
+description: Sign and upload retained artifacts without executing package builds or consumers.
+inputs:
+  package:
+    required: true
+    description: Package key
+  sha:
+    required: true
+    description: Verified source commit
+  artifact-id:
+    default: ''
+    description: Immutable candidate artifact ID when a new build is needed
+  gpg-key:
+    default: ''
+    description: Java signing key
+  gpg-passphrase:
+    default: ''
+    description: Java signing passphrase
+  gpg-fingerprint:
+    default: ''
+    description: Java signing fingerprint
+  central-username:
+    default: ''
+    description: Central token username
+  central-password:
+    default: ''
+    description: Central token password
+  php-token:
+    default: ''
+    description: PHP mirror credential
+  nuget-user:
+    default: ''
+    description: NuGet trusted publisher username
+outputs:
+  artifact-id:
+    description: Authenticated package files for the isolated consumer
+    value: ${{ steps.consumer-artifact.outputs.artifact-id }}
+runs:
+  using: composite
+  steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.sha }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.14'
+      - id: restore
+        name: Restore authenticated retained files before considering a candidate
+        shell: bash
+        run: python automation/scripts/release/release.py inspect "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Require the exact build artifact ID
+        if: steps.restore.outputs.resume == 'false'
+        shell: bash
+        run: '[[ "$BUILD_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]'
+        env:
+          BUILD_ARTIFACT_ID: ${{ inputs.artifact-id }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        if: steps.restore.outputs.resume == 'false'
+        with:
+          artifact-ids: ${{ inputs.artifact-id }}
+          path: release-artifacts
+          merge-multiple: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        if: inputs.package == 'sdk-js' || inputs.package == 'mcp-server'
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Use the pinned npm publishing client
+        if: inputs.package == 'sdk-js' || inputs.package == 'mcp-server'
+        shell: bash
+        run: npm install --global npm@11.21.0 --ignore-scripts
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        if: inputs.package == 'dotnet'
+        with:
+          dotnet-version: '8.0.x'
+      - uses: ruby/setup-ruby@e1bd6146574da5e0795075b5319b300edb30c5b0
+        if: inputs.package == 'ruby'
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+      - id: seal
+        shell: bash
+        run: python automation/scripts/release/release.py seal "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAVEN_GPG_PRIVATE_KEY: ${{ inputs.gpg-key }}
+          MAVEN_GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+          MAVEN_GPG_FINGERPRINT: ${{ inputs.gpg-fingerprint }}
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        id: attest
+        if: steps.seal.outputs.fresh == 'true'
+        with:
+          subject-path: ${{ env.RELEASE_DIR }}/release.json
+      - name: Keep the signed provenance with the record
+        if: steps.seal.outputs.fresh == 'true'
+        shell: bash
+        run: cp "$BUNDLE" "$RELEASE_DIR/release.intoto.jsonl"
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+      - id: retain
+        name: Verify provenance and retain exact files before upload
+        shell: bash
+        run: python automation/scripts/release/release.py retain "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086
+        if: inputs.package == 'python' && steps.retain.outputs.upload == 'true'
+        with:
+          packages-dir: pypi-dist/
+          skip-existing: true
+      - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841
+        id: nuget
+        if: inputs.package == 'dotnet' && steps.retain.outputs.upload == 'true'
+        with:
+          user: ${{ inputs.nuget-user }}
+      - uses: rubygems/configure-rubygems-credentials@f5a32efa94076b80b28556b2d3b04cb3707b6df1
+        if: inputs.package == 'ruby' && steps.retain.outputs.upload == 'true'
+      - name: Publish authenticated artifact
+        if: inputs.package != 'python' && steps.retain.outputs.upload == 'true'
+        shell: bash
+        run: python automation/scripts/release/release.py publish "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_FRESH: ${{ steps.retain.outputs.fresh }}
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+          MAVEN_CENTRAL_USERNAME: ${{ inputs.central-username }}
+          MAVEN_CENTRAL_PASSWORD: ${{ inputs.central-password }}
+          PHP_MIRROR_TOKEN: ${{ inputs.php-token }}
+      - name: Prepare authenticated consumer handoff
+        shell: bash
+        run: python automation/scripts/release/release.py handoff "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        id: consumer-artifact
+        with:
+          name: retained-${{ inputs.package }}-${{ github.run_attempt }}
+          path: consumer-artifacts/*
+          if-no-files-found: error
+          retention-days: 7
