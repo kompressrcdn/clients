@@ -8,8 +8,8 @@ inputs:
     required: true
     description: Verified source commit
   artifact-id:
-    required: true
-    description: Immutable artifact ID from the build job
+    default: ''
+    description: Immutable candidate artifact ID when a new build is needed
   gpg-key:
     default: ''
     description: Java signing key
@@ -31,6 +31,10 @@ inputs:
   nuget-user:
     default: ''
     description: NuGet trusted publisher username
+outputs:
+  artifact-id:
+    description: Authenticated package files for the isolated consumer
+    value: ${{ steps.consumer-artifact.outputs.artifact-id }}
 runs:
   using: composite
   steps:
@@ -43,12 +47,20 @@ runs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.14'
+      - id: restore
+        name: Restore authenticated retained files before considering a candidate
+        shell: bash
+        run: python automation/scripts/release/release.py inspect "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Require the exact build artifact ID
+        if: steps.restore.outputs.resume == 'false'
         shell: bash
         run: '[[ "$BUILD_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]'
         env:
           BUILD_ARTIFACT_ID: ${{ inputs.artifact-id }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        if: steps.restore.outputs.resume == 'false'
         with:
           artifact-ids: ${{ inputs.artifact-id }}
           path: release-artifacts
@@ -119,3 +131,15 @@ runs:
           MAVEN_CENTRAL_USERNAME: ${{ inputs.central-username }}
           MAVEN_CENTRAL_PASSWORD: ${{ inputs.central-password }}
           PHP_MIRROR_TOKEN: ${{ inputs.php-token }}
+      - name: Prepare authenticated consumer handoff
+        shell: bash
+        run: python automation/scripts/release/release.py handoff "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        id: consumer-artifact
+        with:
+          name: retained-${{ inputs.package }}-${{ github.run_attempt }}
+          path: consumer-artifacts/*
+          if-no-files-found: error
+          retention-days: 7

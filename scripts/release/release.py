@@ -157,7 +157,25 @@ def registry(key, version):
 
 
 def release(key, version):
-    return github('releases/tags/' + urllib.parse.quote(tag(key, version), safe=''), missing=True)
+    # The tag endpoint excludes drafts. Callers need contents:write for draft
+    # visibility; isolated builds/consumers use Actions artifacts instead.
+    matches = []
+    page = 1
+    while True:
+        values = github(f'releases?per_page=100&page={page}')
+        require(isinstance(values, list), 'Invalid release listing')
+        matches.extend(value for value in values if value['tag_name'] == tag(key, version))
+        require(len(matches) <= 1, 'Multiple releases use this version tag; reconcile manually')
+        if len(values) < 100:
+            break
+        page += 1
+    if not matches:
+        return None
+    release_id = matches[0]['id']
+    require(type(release_id) is int and release_id > 0, 'Invalid release ID')
+    value = github(f'releases/{release_id}')
+    require(value['id'] == release_id and value['tag_name'] == tag(key, version), 'Release identity changed')
+    return value
 
 
 def asset_names(rel):
@@ -211,6 +229,7 @@ def plan():
     require(selected <= set(KEYS), 'Unknown RELEASE_PACKAGES entry')
     current = run('git', 'rev-parse', 'origin/main', capture=True).strip() == sha == os.environ['GITHUB_SHA']
     pending = []
+    builds = []
     for key, version in versions().items():
         if key not in selected:
             continue
@@ -227,9 +246,13 @@ def plan():
                 require(record['sha'] == sha, f'{key}: resume the original source SHA {record["sha"]}')
                 pending.append(key)
         elif registry(key, version) is None:
-            require(current, 'New releases require current main; older commits may only resume retained releases')
+            if not current:
+                print(f'Skipping {key}: no authenticated retained release for this older source commit')
+                continue
             require(rel is None, f'{key}: existing release needs manual reconciliation')
             pending.append(key)
+            builds.append(key)
+    output('builds', builds)
     output('sha', sha)
     output('sdk', str('sdk-js' in pending).lower())
     output('mcp', str('mcp-server' in pending).lower())
@@ -363,22 +386,34 @@ def authenticated(key, directory, *, sha=None):
     return record
 
 
+def download_asset(rel, name, directory):
+    matches = [asset for asset in rel['assets'] if asset['name'] == name]
+    require(len(matches) == 1, 'Missing or duplicate release asset: ' + name)
+    asset_id = matches[0]['id']
+    require(type(asset_id) is int and asset_id > 0, 'Invalid release asset ID')
+    require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', name), 'Invalid asset filename')
+    with (directory / name).open('xb') as file:
+        subprocess.run(['gh', 'api', f'repos/{REPO}/releases/assets/{asset_id}',
+                        '--header', 'Accept: application/octet-stream'],
+                       cwd=CONTROL_ROOT, stdout=file, check=True)
+
+
 def download(key, version, directory):
     # Authenticate metadata before it can select filenames or affect publication.
     rel = release(key, version)
     require(rel is not None and {'release.json', 'release.intoto.jsonl'} <= asset_names(rel),
             'Existing release has no authenticated record; reconcile it manually')
     for name in ('release.json', 'release.intoto.jsonl'):
-        gh('release', 'download', tag(key, version), '--pattern', name, '--dir', str(directory))
+        download_asset(rel, name, directory)
     record = read_json(directory / 'release.json')
     require(SHA.fullmatch(record['sha']), 'Invalid retained source commit')
     verify_attestation(directory / 'release.json', sha=record['sha'])
     validate_record(record, key, version, record['sha'], directory, files=False)
     for name in record['files']:
-        gh('release', 'download', tag(key, version), '--pattern', name, '--dir', str(directory))
+        download_asset(rel, name, directory)
     for name in ('published.json', 'published.intoto.jsonl', 'central-deployment.json', 'central-upload-started.json'):
         if name in asset_names(rel):
-            gh('release', 'download', tag(key, version), '--pattern', name, '--dir', str(directory))
+            download_asset(rel, name, directory)
     validate_record(record, key, version, record['sha'], directory)
     check_tag(key, version, record['sha'])
     return record
@@ -420,6 +455,7 @@ def seal(key, directory):
         authenticated(key, directory)
         output('fresh', 'false')
     else:
+        require(release(key, version) is None, 'Restore the authenticated retained release before sealing a candidate')
         require(sha == os.environ['GITHUB_SHA'], 'Only the workflow source commit may create provenance')
         record = read_json(directory / 'candidate.json')
         validate_record(record, key, version, sha, directory)
@@ -464,6 +500,16 @@ def retain(key, directory):
         for name in record['files']:
             if name.endswith(('.whl', '.tar.gz')):
                 shutil.copyfile(directory / name, packages / name)
+
+
+def handoff(key, directory):
+    record = authenticated(key, directory)
+    destination = directory.parent / 'consumer-artifacts'
+    destination.mkdir()
+    names = set(record['files']) | {'release.json', 'release.intoto.jsonl'}
+    for name in names:
+        shutil.copyfile(directory / name, destination / name)
+    authenticated(key, destination)
 
 
 def completion(record, directory):
@@ -698,7 +744,7 @@ def finish(key, directory):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('versions', 'plan', 'inspect', 'build_candidate', 'seal', 'retain', 'publish', 'consume', 'receipt', 'finish'))
+    parser.add_argument('command', choices=('versions', 'plan', 'inspect', 'build_candidate', 'seal', 'retain', 'publish', 'handoff', 'authenticated', 'consume', 'receipt', 'finish'))
     parser.add_argument('package', nargs='?', choices=KEYS)
     parser.add_argument('directory', nargs='?', type=Path)
     args = parser.parse_args()

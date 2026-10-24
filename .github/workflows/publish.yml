@@ -28,11 +28,13 @@ jobs:
       (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: release
     permissions:
       actions: read
       attestations: read
-      contents: read
+      contents: write
     outputs:
+      builds: ${{ steps.plan.outputs.builds }}
       sha: ${{ steps.plan.outputs.sha }}
       sdk: ${{ steps.plan.outputs.sdk }}
       mcp: ${{ steps.plan.outputs.mcp }}
@@ -54,7 +56,7 @@ jobs:
 
   sdk-build:
     needs: [plan]
-    if: needs.plan.outputs.sdk == 'true'
+    if: needs.plan.outputs.sdk == 'true' && contains(fromJSON(needs.plan.outputs.builds), 'sdk-js')
     permissions:
       contents: read
       actions: read
@@ -67,9 +69,11 @@ jobs:
 
   sdk-publish:
     needs: [plan, sdk-build]
-    if: always() && needs.plan.result == 'success' && needs.sdk-build.result == 'success'
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.sdk == 'true' && (needs.sdk-build.result == 'success' || needs.sdk-build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -84,7 +88,8 @@ jobs:
         with:
           path: automation
           persist-credentials: false
-      - uses: ./automation/.github/actions/release-publish
+      - id: publish
+        uses: ./automation/.github/actions/release-publish
         with:
           package: sdk-js
           sha: ${{ needs.plan.outputs.sha }}
@@ -102,6 +107,7 @@ jobs:
       package: sdk-js
       sha: ${{ needs.plan.outputs.sha }}
       phase: consume
+      artifact-id: ${{ needs.sdk-publish.outputs.artifact-id }}
 
   sdk:
     needs: [plan, sdk-consumer]
@@ -129,7 +135,7 @@ jobs:
 
   mcp-build:
     needs: [plan, sdk]
-    if: always() && needs.plan.result == 'success' && needs.plan.outputs.mcp == 'true' && (needs.sdk.result == 'success' || needs.sdk.result == 'skipped')
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.mcp == 'true' && (needs.plan.outputs.sdk != 'true' || needs.sdk.result == 'success') && contains(fromJSON(needs.plan.outputs.builds), 'mcp-server')
     permissions:
       contents: read
       actions: read
@@ -141,10 +147,12 @@ jobs:
       phase: build
 
   mcp-publish:
-    needs: [plan, mcp-build]
-    if: always() && needs.plan.result == 'success' && needs.mcp-build.result == 'success'
+    needs: [plan, sdk, mcp-build]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.mcp == 'true' && (needs.mcp-build.result == 'success' || needs.mcp-build.result == 'skipped') && (needs.plan.outputs.sdk != 'true' || needs.sdk.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -159,7 +167,8 @@ jobs:
         with:
           path: automation
           persist-credentials: false
-      - uses: ./automation/.github/actions/release-publish
+      - id: publish
+        uses: ./automation/.github/actions/release-publish
         with:
           package: mcp-server
           sha: ${{ needs.plan.outputs.sha }}
@@ -177,6 +186,7 @@ jobs:
       package: mcp-server
       sha: ${{ needs.plan.outputs.sha }}
       phase: consume
+      artifact-id: ${{ needs.mcp-publish.outputs.artifact-id }}
 
   mcp:
     needs: [plan, mcp-consumer]
@@ -205,7 +215,7 @@ jobs:
 
   python-build:
     needs: [plan]
-    if: contains(fromJSON(needs.plan.outputs.packages), 'python')
+    if: contains(fromJSON(needs.plan.outputs.packages), 'python') && contains(fromJSON(needs.plan.outputs.builds), 'python')
     permissions:
       contents: read
       actions: read
@@ -218,9 +228,11 @@ jobs:
 
   python-publish:
     needs: [plan, python-build]
-    if: always() && needs.plan.result == 'success' && needs.python-build.result == 'success'
+    if: always() && needs.plan.result == 'success' && contains(fromJSON(needs.plan.outputs.packages), 'python') && (needs.python-build.result == 'success' || needs.python-build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -235,7 +247,8 @@ jobs:
         with:
           path: automation
           persist-credentials: false
-      - uses: ./automation/.github/actions/release-publish
+      - id: publish
+        uses: ./automation/.github/actions/release-publish
         with:
           package: python
           sha: ${{ needs.plan.outputs.sha }}
@@ -253,6 +266,7 @@ jobs:
       package: python
       sha: ${{ needs.plan.outputs.sha }}
       phase: consume
+      artifact-id: ${{ needs.python-publish.outputs.artifact-id }}
 
   python:
     needs: [plan, python-consumer]
@@ -280,7 +294,7 @@ jobs:
 
   go-build:
     needs: [plan]
-    if: contains(fromJSON(needs.plan.outputs.packages), 'go')
+    if: contains(fromJSON(needs.plan.outputs.packages), 'go') && contains(fromJSON(needs.plan.outputs.builds), 'go')
     permissions:
       contents: read
       actions: read
@@ -293,9 +307,11 @@ jobs:
 
   go-publish:
     needs: [plan, go-build]
-    if: always() && needs.plan.result == 'success' && needs.go-build.result == 'success'
+    if: always() && needs.plan.result == 'success' && contains(fromJSON(needs.plan.outputs.packages), 'go') && (needs.go-build.result == 'success' || needs.go-build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -310,7 +326,8 @@ jobs:
         with:
           path: automation
           persist-credentials: false
-      - uses: ./automation/.github/actions/release-publish
+      - id: publish
+        uses: ./automation/.github/actions/release-publish
         with:
           package: go
           sha: ${{ needs.plan.outputs.sha }}
@@ -328,6 +345,7 @@ jobs:
       package: go
       sha: ${{ needs.plan.outputs.sha }}
       phase: consume
+      artifact-id: ${{ needs.go-publish.outputs.artifact-id }}
 
   go:
     needs: [plan, go-consumer]
@@ -355,7 +373,7 @@ jobs:
 
   java-build:
     needs: [plan]
-    if: contains(fromJSON(needs.plan.outputs.packages), 'java')
+    if: contains(fromJSON(needs.plan.outputs.packages), 'java') && contains(fromJSON(needs.plan.outputs.builds), 'java')
     permissions:
       contents: read
       actions: read
@@ -368,9 +386,11 @@ jobs:
 
   java-publish:
     needs: [plan, java-build]
-    if: always() && needs.plan.result == 'success' && needs.java-build.result == 'success'
+    if: always() && needs.plan.result == 'success' && contains(fromJSON(needs.plan.outputs.packages), 'java') && (needs.java-build.result == 'success' || needs.java-build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -385,7 +405,8 @@ jobs:
         with:
           path: automation
           persist-credentials: false
-      - uses: ./automation/.github/actions/release-publish
+      - id: publish
+        uses: ./automation/.github/actions/release-publish
         with:
           package: java
           sha: ${{ needs.plan.outputs.sha }}
@@ -408,6 +429,7 @@ jobs:
       package: java
       sha: ${{ needs.plan.outputs.sha }}
       phase: consume
+      artifact-id: ${{ needs.java-publish.outputs.artifact-id }}
 
   java:
     needs: [plan, java-consumer]
@@ -435,7 +457,7 @@ jobs:
 
   dotnet-build:
     needs: [plan]
-    if: contains(fromJSON(needs.plan.outputs.packages), 'dotnet')
+    if: contains(fromJSON(needs.plan.outputs.packages), 'dotnet') && contains(fromJSON(needs.plan.outputs.builds), 'dotnet')
     permissions:
       contents: read
       actions: read
@@ -448,9 +470,11 @@ jobs:
 
   dotnet-publish:
     needs: [plan, dotnet-build]
-    if: always() && needs.plan.result == 'success' && needs.dotnet-build.result == 'success'
+    if: always() && needs.plan.result == 'success' && contains(fromJSON(needs.plan.outputs.packages), 'dotnet') && (needs.dotnet-build.result == 'success' || needs.dotnet-build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -465,7 +489,8 @@ jobs:
         with:
           path: automation
           persist-credentials: false
-      - uses: ./automation/.github/actions/release-publish
+      - id: publish
+        uses: ./automation/.github/actions/release-publish
         with:
           package: dotnet
           sha: ${{ needs.plan.outputs.sha }}
@@ -484,6 +509,7 @@ jobs:
       package: dotnet
       sha: ${{ needs.plan.outputs.sha }}
       phase: consume
+      artifact-id: ${{ needs.dotnet-publish.outputs.artifact-id }}
 
   dotnet:
     needs: [plan, dotnet-consumer]
@@ -511,7 +537,7 @@ jobs:
 
   php-build:
     needs: [plan]
-    if: contains(fromJSON(needs.plan.outputs.packages), 'php')
+    if: contains(fromJSON(needs.plan.outputs.packages), 'php') && contains(fromJSON(needs.plan.outputs.builds), 'php')
     permissions:
       contents: read
       actions: read
@@ -524,9 +550,11 @@ jobs:
 
   php-publish:
     needs: [plan, php-build]
-    if: always() && needs.plan.result == 'success' && needs.php-build.result == 'success'
+    if: always() && needs.plan.result == 'success' && contains(fromJSON(needs.plan.outputs.packages), 'php') && (needs.php-build.result == 'success' || needs.php-build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -541,7 +569,8 @@ jobs:
         with:
           path: automation
           persist-credentials: false
-      - uses: ./automation/.github/actions/release-publish
+      - id: publish
+        uses: ./automation/.github/actions/release-publish
         with:
           package: php
           sha: ${{ needs.plan.outputs.sha }}
@@ -560,6 +589,7 @@ jobs:
       package: php
       sha: ${{ needs.plan.outputs.sha }}
       phase: consume
+      artifact-id: ${{ needs.php-publish.outputs.artifact-id }}
 
   php:
     needs: [plan, php-consumer]
@@ -587,7 +617,7 @@ jobs:
 
   ruby-build:
     needs: [plan]
-    if: contains(fromJSON(needs.plan.outputs.packages), 'ruby')
+    if: contains(fromJSON(needs.plan.outputs.packages), 'ruby') && contains(fromJSON(needs.plan.outputs.builds), 'ruby')
     permissions:
       contents: read
       actions: read
@@ -600,9 +630,11 @@ jobs:
 
   ruby-publish:
     needs: [plan, ruby-build]
-    if: always() && needs.plan.result == 'success' && needs.ruby-build.result == 'success'
+    if: always() && needs.plan.result == 'success' && contains(fromJSON(needs.plan.outputs.packages), 'ruby') && (needs.ruby-build.result == 'success' || needs.ruby-build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.publish.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -617,7 +649,8 @@ jobs:
         with:
           path: automation
           persist-credentials: false
-      - uses: ./automation/.github/actions/release-publish
+      - id: publish
+        uses: ./automation/.github/actions/release-publish
         with:
           package: ruby
           sha: ${{ needs.plan.outputs.sha }}
@@ -635,6 +668,7 @@ jobs:
       package: ruby
       sha: ${{ needs.plan.outputs.sha }}
       phase: consume
+      artifact-id: ${{ needs.ruby-publish.outputs.artifact-id }}
 
   ruby:
     needs: [plan, ruby-consumer]

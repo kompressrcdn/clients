@@ -109,7 +109,7 @@ class ReleaseTests(unittest.TestCase):
             output.assert_called_once_with('fresh', 'false')
 
     def test_new_build_cannot_claim_another_workflow_commit(self):
-        with patch.object(r, 'versions', return_value={'sdk-js': '1.0.2'}), patch.object(r, 'source_sha', return_value=self.sha), patch.dict(os.environ, {'GITHUB_SHA': 'b' * 40}), patch.object(r, 'sign_java') as sign:
+        with patch.object(r, 'versions', return_value={'sdk-js': '1.0.2'}), patch.object(r, 'source_sha', return_value=self.sha), patch.dict(os.environ, {'GITHUB_SHA': 'b' * 40}), patch.object(r, 'release', return_value=None), patch.object(r, 'sign_java') as sign:
             with self.assertRaisesRegex(RuntimeError, 'workflow source'):
                 r.seal('sdk-js', self.directory)
             sign.assert_not_called()
@@ -237,6 +237,7 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(result['sdk'], 'false')
             self.assertEqual(result['mcp'], 'true')
             self.assertEqual(result['packages'], ['python'])
+            self.assertEqual(result['builds'], ['python'])
 
     def test_npm_retry_cannot_claim_newer_source_provenance(self):
         self.retained()
@@ -264,7 +265,7 @@ class ReleaseTests(unittest.TestCase):
     def test_new_record_is_derived_from_checked_candidate(self):
         self.retained()
         (self.directory / 'release.json').rename(self.directory / 'candidate.json')
-        with patch.object(r, 'versions', return_value={'sdk-js': '1.0.2'}), patch.object(r, 'source_sha', return_value=self.sha), patch.dict(os.environ, {'GITHUB_SHA': self.sha}), patch.object(r, 'output') as output:
+        with patch.object(r, 'versions', return_value={'sdk-js': '1.0.2'}), patch.object(r, 'source_sha', return_value=self.sha), patch.dict(os.environ, {'GITHUB_SHA': self.sha}), patch.object(r, 'release', return_value=None), patch.object(r, 'output') as output:
             r.seal('sdk-js', self.directory)
         record = r.read_json(self.directory / 'release.json')
         self.assertFalse((self.directory / 'candidate.json').exists())
@@ -333,19 +334,128 @@ class ReleaseTests(unittest.TestCase):
             completed = subprocess.run([sys.executable, '-c', script], env=env, capture_output=True, text=True)
             self.assertEqual(completed.returncode == 0, result == 'success')
 
+    def test_draft_discovery_paginates_and_reads_the_selected_id(self):
+        first = [{'id': i + 1, 'tag_name': f'sdk-python/v9.0.{i}', 'draft': False} for i in range(100)]
+        draft = {'id': 101, 'tag_name': 'sdk-java/v0.1.0', 'draft': True, 'assets': []}
+        with patch.object(r, 'github', side_effect=[first, [draft], draft]) as api:
+            self.assertEqual(r.release('java', '0.1.0'), draft)
+        self.assertEqual([call.args[0] for call in api.call_args_list],
+                         ['releases?per_page=100&page=1', 'releases?per_page=100&page=2', 'releases/101'])
+
+    def test_release_lookup_rejects_duplicate_tags_and_api_errors(self):
+        draft = {'id': 10, 'tag_name': 'sdk-java/v0.1.0', 'draft': True}
+        with patch.object(r, 'github', return_value=[draft, {**draft, 'id': 11}]), self.assertRaisesRegex(RuntimeError, 'Multiple releases'):
+            r.release('java', '0.1.0')
+        with patch.object(r, 'github', side_effect=RuntimeError('HTTP 403')), self.assertRaisesRegex(RuntimeError, '403'):
+            r.release('java', '0.1.0')
+        with patch.object(r, 'github', return_value=[]):
+            self.assertIsNone(r.release('java', '0.1.0'))
+
+    def test_asset_download_uses_id_and_preserves_binary_bytes(self):
+        payload = bytes(range(256))
+        def transport(command, **kwargs):
+            self.assertEqual(command[:3], ['gh', 'api', f'repos/{r.REPO}/releases/assets/42'])
+            kwargs['stdout'].write(payload)
+        rel = {'assets': [{'name': 'sdk.tgz', 'id': 42}]}
+        with patch.object(r.subprocess, 'run', side_effect=transport):
+            r.download_asset(rel, 'sdk.tgz', self.directory)
+        self.assertEqual((self.directory / 'sdk.tgz').read_bytes(), payload)
+        for name, assets in (('../outside', [{'name': '../outside', 'id': 42}]), ('other', rel['assets']),
+                             ('sdk.tgz', rel['assets'] * 2)):
+            with self.subTest(name=name), self.assertRaises(RuntimeError):
+                r.download_asset({'assets': assets}, name, self.directory)
+
+    def test_old_sha_recovers_retained_packages_without_building_others(self):
+        event = self.directory / 'event.json'
+        r.write_json(event, {'inputs': {'sha': self.sha}})
+        run = {**self.valid_run(), 'id': 123}
+        rels = {'python': {'draft': True, 'assets': [{'name': 'release.json'}]}, 'java': None}
+        env = {'GITHUB_EVENT_PATH': str(event), 'GITHUB_REPOSITORY': r.REPO,
+               'GITHUB_REF': 'refs/heads/main', 'GITHUB_EVENT_NAME': 'workflow_dispatch',
+               'GITHUB_SHA': 'b' * 40, 'RELEASE_PACKAGES': 'python,java'}
+        with patch.dict(os.environ, env), patch.object(r, 'repository_controls'), patch.object(r, 'github', return_value={'workflow_runs': [run]}), patch.object(r, 'run', return_value='b' * 40), patch.object(r, 'versions', return_value={'python': '0.1.0', 'java': '0.1.0'}), patch.object(r, 'release', side_effect=lambda k, v: rels[k]), patch.object(r, 'registry', return_value=None), patch.object(r, 'download', return_value={'sha': self.sha}), patch.object(r, 'complete', return_value=False), patch.object(r, 'output') as output:
+            r.plan()
+        values = dict(call.args for call in output.call_args_list)
+        self.assertEqual(values['packages'], ['python'])
+        self.assertEqual(values['builds'], [])
+        self.assertEqual(values['sha'], self.sha)
+
+    def test_candidate_cannot_be_resigned_when_a_remote_release_exists(self):
+        with patch.object(r, 'versions', return_value={'java': '0.1.0'}), patch.object(r, 'source_sha', return_value=self.sha), patch.object(r, 'release', return_value={'draft': True}), patch.object(r, 'sign_java') as sign:
+            with self.assertRaisesRegex(RuntimeError, 'Restore the authenticated retained release'):
+                r.seal('java', self.directory)
+            sign.assert_not_called()
+
+    def test_publisher_retry_restores_signed_files_before_candidate_download(self):
+        import shutil
+        version = '0.1.0'
+        record = {'schema': 2, 'package': 'java', 'version': version, 'sha': self.sha,
+                  'files': {'central-bundle.zip': '0' * 64}}
+        remote = self.directory / 'remote'
+        remote.mkdir()
+        (remote / 'central-bundle.zip').write_bytes(b'original signed bundle')
+        record['files']['central-bundle.zip'] = r.digest(remote / 'central-bundle.zip')
+        r.write_json(remote / 'release.json', record)
+        (remote / 'release.intoto.jsonl').write_text('fixture provenance')
+        names = sorted(p.name for p in remote.iterdir())
+        rel = {'id': 1, 'draft': True, 'tag_name': r.tag('java', version),
+               'assets': [{'name': n, 'id': i + 1} for i, n in enumerate(names)]}
+        def asset(rel, name, directory):
+            shutil.copyfile(remote / name, directory / name)
+        retry = self.directory / 'retry'
+        with patch.object(r, 'versions', return_value={'java': version}), patch.object(r, 'source_sha', return_value=self.sha), patch.object(r, 'release', return_value=rel), patch.object(r, 'download_asset', side_effect=asset), patch.object(r, 'verify_attestation'), patch.object(r, 'check_tag', return_value=True), patch.object(r, 'output') as output, patch.object(r, 'sign_java') as sign, patch.object(r, 'registry', return_value=None), patch.object(r, 'gh') as write:
+            r.inspect('java', retry)
+            self.assertIn(('resume', 'true'), [call.args for call in output.call_args_list])
+            r.seal('java', retry)
+            r.retain('java', retry)
+            sign.assert_not_called()
+            write.assert_not_called()
+            self.assertEqual((retry / 'central-bundle.zip').read_bytes(), b'original signed bundle')
+
+    def test_read_only_consumer_receives_authenticated_handoff_without_draft_access(self):
+        import shutil
+        self.retained()
+        (self.directory / 'release.intoto.jsonl').write_text('fixture provenance')
+        (self.directory / 'central-deployment.json').write_text('{"id":"fixture state"}')
+        # Use a nested job workspace so handoff stays within this test's temporary tree.
+        publisher = self.directory / 'publisher'
+        publisher.mkdir()
+        for name in ('sdk.tgz', 'release.json', 'release.intoto.jsonl', 'central-deployment.json'):
+            shutil.move(self.directory / name, publisher / name)
+        with patch.object(r, 'versions', return_value={'sdk-js': '1.0.2'}), patch.object(r, 'source_sha', return_value=self.sha), patch.object(r, 'verify_attestation'), patch.object(r, 'verify_public'), patch.object(r, 'run') as run, patch.object(r, 'release', side_effect=AssertionError('Consumer must not look up drafts')):
+            r.handoff('sdk-js', publisher)
+            consumer = self.directory / 'consumer-artifacts'
+            self.assertFalse((consumer / 'central-deployment.json').exists())
+            r.consume('sdk-js', consumer)
+            run.assert_called_once()
+            (consumer / 'sdk.tgz').write_bytes(b'tampered')
+            with self.assertRaises(RuntimeError):
+                r.consume('sdk-js', consumer)
+            self.assertEqual(run.call_count, 1)
+
     def test_workflow_permissions_and_job_order(self):
         workflow = (r.CONTROL_ROOT / '.github/workflows/publish.yml').read_text()
         check = (r.CONTROL_ROOT / '.github/workflows/release-check.yml').read_text()
         manual = (r.CONTROL_ROOT / '.github/workflows/mcp-release.yml').read_text()
         self.assertIn("vars.RELEASE_AUTOMATION_ENABLED == 'true'", workflow)
         self.assertIn('needs: [plan, sdk]', workflow)
-        self.assertIn("needs.sdk.result == 'success' || needs.sdk.result == 'skipped'", workflow)
+        self.assertIn('needs: [plan, sdk, mcp-build]', workflow)
+        self.assertNotIn('release.py inspect', check)
+        self.assertNotIn('release.py download', check)
+        self.assertIn('artifact-ids: ${{ inputs.artifact-id }}', check)
+        self.assertEqual(workflow.count("needs.plan.outputs.sdk != 'true' || needs.sdk.result == 'success'"), 2)
+        self.assertNotIn("needs.sdk.result == 'skipped'", workflow)
         for source in (check, manual):
             for forbidden in ('secrets.', 'id-token:', 'contents: write', 'environment:', 'release create'):
                 self.assertNotIn(forbidden, source)
         for key in ('sdk', 'mcp', 'python', 'go', 'java', 'dotnet', 'php', 'ruby'):
             self.assertIn(f'needs: [plan, {key}-consumer]', workflow)
             self.assertIn(f'artifact-id: ${{{{ needs.{key}-build.outputs.artifact-id }}}}', workflow)
+            self.assertIn(f'artifact-id: ${{{{ needs.{key}-publish.outputs.artifact-id }}}}', workflow)
+        publisher = (r.CONTROL_ROOT / '.github/actions/release-publish/action.yml').read_text()
+        self.assertLess(publisher.index('release.py inspect'), publisher.index('actions/download-artifact'))
+        self.assertIn("if: steps.restore.outputs.resume == 'false'", publisher)
+        self.assertLess(publisher.index('release.py publish'), publisher.index('release.py handoff'))
         for action in ('release-publish', 'release-finish'):
             privileged = (r.CONTROL_ROOT / f'.github/actions/{action}/action.yml').read_text()
             for forbidden in ('build_candidate', 'release.py consume', 'npm run', 'bundle install', 'pip install', 'verify.mjs', 'node_modules'):

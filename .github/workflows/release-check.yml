@@ -11,6 +11,10 @@ on:
       phase:
         type: string
         required: true
+      artifact-id:
+        type: string
+        required: false
+        default: ''
     outputs:
       artifact-id:
         value: ${{ jobs.check.outputs.artifact-id }}
@@ -43,9 +47,26 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.14'
-      - id: inspect
-        name: Authenticate retained files or select a new build
-        run: python automation/scripts/release/release.py inspect "$PACKAGE" "$RELEASE_DIR"
+      - name: Validate the isolated job mode
+        env:
+          PHASE: ${{ inputs.phase }}
+          ARTIFACT_ID: ${{ inputs.artifact-id }}
+        run: |
+          if [ "$PHASE" = consume ]; then
+            [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          else
+            test "$PHASE" = build
+            mkdir "$RELEASE_DIR"
+          fi
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        if: inputs.phase == 'consume'
+        with:
+          artifact-ids: ${{ inputs.artifact-id }}
+          path: ${{ env.RELEASE_DIR }}
+          merge-multiple: true
+      - name: Authenticate publisher handoff before installing packages
+        if: inputs.phase == 'consume'
+        run: python automation/scripts/release/release.py authenticated "$PACKAGE" "$RELEASE_DIR"
         env:
           GH_TOKEN: ${{ github.token }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
@@ -79,13 +100,13 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: false
       - name: Install build dependencies
-        if: inputs.phase == 'build' && steps.inspect.outputs.resume == 'false'
+        if: inputs.phase == 'build'
         shell: bash
         run: |
           if [ "$PACKAGE" = python ]; then python -m pip install -e './source/sdk-python[dev]'; fi
           if [ "$PACKAGE" = ruby ]; then cd source/sdk-ruby && bundle install; fi
       - name: Build and verify without publishing permissions
-        if: inputs.phase == 'build' && steps.inspect.outputs.resume == 'false'
+        if: inputs.phase == 'build'
         run: python automation/scripts/release/release.py build_candidate "$PACKAGE" "$RELEASE_DIR"
       - name: Check the installed public package without publishing permissions
         if: inputs.phase == 'consume'
