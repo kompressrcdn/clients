@@ -669,6 +669,34 @@ def verify_public(key, directory, record):
         check_tag(key, version, record['sha'])
 
 
+def normalized_mcp_packages(packages):
+    # Input defaults from the 2025-12-11 MCP schema. Registry serialization can
+    # omit them; all other package fields must remain identical.
+    packages = json.loads(json.dumps(packages))
+
+    def normalize_input(value, *, argument=False):
+        for key, default in (('isRequired', False), ('isSecret', False), ('format', 'string')):
+            value.setdefault(key, default)
+        if argument:
+            value.setdefault('isRepeated', False)
+        for nested in value.get('variables', {}).values():
+            normalize_input(nested)
+
+    for package in packages:
+        for value in package.get('environmentVariables', []):
+            normalize_input(value)
+        for field in ('packageArguments', 'runtimeArguments'):
+            for value in package.get(field, []):
+                normalize_input(value, argument=True)
+        transport = package.get('transport', {})
+        for value in transport.get('headers', []):
+            normalize_input(value)
+        for value in transport.get('variables', {}).values():
+            normalize_input(value)
+    # JSON equality retains the distinction between booleans and integers.
+    return json.dumps(packages, sort_keys=True, separators=(',', ':'))
+
+
 def mcp_matches(directory, record):
     url = 'https://registry.modelcontextprotocol.io/v0.1/servers/com.kompressr%2Fkompressr/versions/' + record['version']
     expected = read_json(directory / 'server.json')
@@ -676,7 +704,8 @@ def mcp_matches(directory, record):
     if data is not None:
         actual = data['server']
         require(actual['name'] == expected['name'] and actual['version'] == expected['version'] and
-                actual['packages'] == expected['packages'], 'Published MCP metadata differs')
+                normalized_mcp_packages(actual['packages']) == normalized_mcp_packages(expected['packages']),
+                'Published MCP metadata differs')
     return data
 
 
