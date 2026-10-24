@@ -205,6 +205,41 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn('/status?id=', get.call_args.args[0])
             gh.assert_not_called()
 
+    def test_nuget_can_become_available_after_fifteen_minutes(self):
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, 'w') as archive:
+            archive.writestr('lib/sdk.dll', b'verified payload')
+        package = stream.getvalue()
+        (self.directory / 'Kompressr.Sdk.0.1.1.nupkg').write_bytes(package)
+        elapsed = 0
+
+        def sleep(seconds):
+            nonlocal elapsed
+            elapsed += seconds
+
+        def metadata(key, version):
+            self.assertEqual((key, version), ('dotnet', '0.1.1'))
+            return b'<package/>' if elapsed >= 15 * 60 else None
+
+        with patch.object(r.time, 'sleep', side_effect=sleep), patch.object(r, 'registry', side_effect=metadata), patch.object(r, 'request', return_value=package) as download:
+            r.verify_public('dotnet', self.directory, {'version': '0.1.1'})
+            self.assertEqual(elapsed, 15 * 60)
+            download.assert_called_once_with('https://api.nuget.org/v3-flatcontainer/kompressr.sdk/0.1.1/kompressr.sdk.0.1.1.nupkg')
+
+    def test_nuget_validation_wait_is_bounded(self):
+        elapsed = 0
+
+        def sleep(seconds):
+            nonlocal elapsed
+            elapsed += seconds
+
+        with patch.object(r.time, 'sleep', side_effect=sleep), patch.object(r, 'registry', return_value=None), patch.object(r, 'request') as download:
+            with self.assertRaisesRegex(RuntimeError, 'Timed out waiting for dotnet registry metadata; retry the same release'):
+                r.verify_public('dotnet', self.directory, {'version': '0.1.1'})
+            self.assertGreaterEqual(elapsed, 15 * 60)
+            self.assertLessEqual(elapsed, 30 * 60)
+            download.assert_not_called()
+
     def test_nuget_allows_repository_signature_only(self):
         def archive(files):
             stream = io.BytesIO()
