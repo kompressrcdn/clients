@@ -3,7 +3,7 @@
 .NET 8+. Use in ASP.NET Core, workers and console applications. Browser-hosted Blazor WebAssembly is not a trusted place for project credentials; call a backend.
 
 ```sh
-dotnet add package Kompressr.Sdk --version 0.1.0
+dotnet add package Kompressr.Sdk --version 0.1.1
 ```
 
 Integration helper; provide an async persistence callback that commits the ID:

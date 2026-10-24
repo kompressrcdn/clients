@@ -7,7 +7,7 @@ Upload files, wait for processing and return delivery links from your C# backend
 Run from the directory containing your application's project file:
 
 ```sh
-dotnet add package Kompressr.Sdk --version 0.1.0
+dotnet add package Kompressr.Sdk --version 0.1.1
 ```
 
 Create a [Kompressr account](https://kompressr.com/signup), choose a plan with API upload access, and create a project. Get its API key from **Dashboard → Projects → API Keys**, then configure `KOMPRESSR_API_KEY` in your backend's secret store. Check [pricing](https://kompressr.com/pricing#file-support) for current file limits and scoped-key access.
