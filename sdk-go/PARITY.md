@@ -1,6 +1,6 @@
 # Behavior parity
 
-The Go SDK 0.1.0 implements the public file and platform APIs of JS SDK 1.0.0 against contract snapshot 2026-10-15. Dashboard/session routes are outside SDK scope. This matrix identifies executable local evidence; it does not claim production verification.
+The Go SDK 0.1.1 implements the public file and platform APIs of JS SDK 1.0.0 against contract snapshot 2026-10-15. Dashboard/session routes are outside SDK scope. This matrix identifies executable local evidence; it does not claim production verification.
 
 | Surface or behavior | Go API | Evidence |
 | --- | --- | --- |

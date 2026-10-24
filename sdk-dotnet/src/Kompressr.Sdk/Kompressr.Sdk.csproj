@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PackageId>Kompressr.Sdk</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Kompressr</Authors>
     <Description>Async .NET client for Kompressr uploads, delivery, asset lifecycle and scoped identities.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

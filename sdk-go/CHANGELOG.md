@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Remove the publishing guide and its README link from the module distribution.
+- Verify module archives and installed consumers using the declared SDK version.
+
 ## 0.1.0
 
 - Support Go 1.24 and later.

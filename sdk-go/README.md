@@ -7,7 +7,7 @@ Requires Go 1.24 or newer. The SDK uses only the standard library and works with
 ## Install
 
 ```sh
-go get github.com/kompressrcdn/clients/sdk-go@v0.1.0
+go get github.com/kompressrcdn/clients/sdk-go@v0.1.1
 ```
 
 ## Upload a file

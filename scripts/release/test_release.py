@@ -1,3 +1,4 @@
+import copy
 import io
 import json
 import os
@@ -216,6 +217,83 @@ class ReleaseTests(unittest.TestCase):
         r.compare_zip(original, signed)
         with self.assertRaises(RuntimeError):
             r.compare_zip(original, archive({'lib/sdk.dll': b'changed', 'package.nuspec': b'meta'}))
+
+    def mcp_manifest(self):
+        return {'name': 'com.kompressr/kompressr', 'version': '2.0.3', 'packages': [
+            {'registryType': 'npm', 'registryBaseUrl': 'https://registry.npmjs.org',
+             'identifier': '@kompressr/mcp-server', 'version': '2.0.3',
+             'transport': {'type': 'stdio'}, 'environmentVariables': [
+                 {'name': 'KOMPRESSR_API_KEY', 'format': 'string', 'isRequired': True, 'isSecret': True},
+                 {'name': 'KOMPRESSR_PROJECT_ID', 'format': 'string', 'isRequired': False}]},
+            {'registryType': 'mcpb', 'identifier': 'https://example.com/server.mcpb',
+             'fileSha256': 'a' * 64, 'transport': {'type': 'stdio'}}]}
+
+    def test_mcp_registry_omitted_false_is_already_published(self):
+        expected = self.mcp_manifest()
+        r.write_json(self.directory / 'server.json', expected)
+        actual = copy.deepcopy(expected)
+        del actual['packages'][0]['environmentVariables'][1]['isRequired']
+        response = {'server': actual}
+        with patch.object(r, 'get_json', return_value=response), patch.object(r, 'run') as run:
+            self.assertIs(r.mcp_matches(self.directory, {'version': '2.0.3'}), response)
+            r.mcp_registry(self.directory, {'version': '2.0.3'})
+            run.assert_not_called()
+        self.assertNotIn('isRequired', actual['packages'][0]['environmentVariables'][1])
+        self.assertEqual(r.read_json(self.directory / 'server.json'), expected)
+
+    def test_mcp_registry_defaults_apply_only_to_schema_input_locations(self):
+        expected = self.mcp_manifest()
+        package = expected['packages'][0]
+        package['packageArguments'] = [{'type': 'named', 'name': '--project', 'isRepeated': False,
+            'isRequired': False, 'isSecret': False, 'format': 'string',
+            'variables': {'project': {'isRequired': False, 'isSecret': False, 'format': 'string'}}}]
+        package['runtimeArguments'] = [{'type': 'positional', 'value': 'run', 'isRepeated': False}]
+        package['transport'] = {'type': 'streamable-http', 'url': 'https://example.com/mcp',
+            'headers': [{'name': 'X-Project', 'isRequired': False}],
+            'variables': {'project': {'isRequired': False}}}
+        r.write_json(self.directory / 'server.json', expected)
+        actual = copy.deepcopy(expected)
+        actual['packages'][0]['packageArguments'] = [{'type': 'named', 'name': '--project', 'variables': {'project': {}}}]
+        actual['packages'][0]['runtimeArguments'] = [{'type': 'positional', 'value': 'run'}]
+        actual['packages'][0]['transport']['headers'] = [{'name': 'X-Project'}]
+        actual['packages'][0]['transport']['variables'] = {'project': {}}
+        del actual['packages'][0]['environmentVariables'][1]['format']
+        with patch.object(r, 'get_json', return_value={'server': actual}):
+            r.mcp_matches(self.directory, {'version': '2.0.3'})
+        # An arbitrary package-level false field is not a documented input default.
+        actual['packages'][0]['isRequired'] = False
+        with patch.object(r, 'get_json', return_value={'server': actual}), self.assertRaisesRegex(RuntimeError, 'metadata differs'):
+            r.mcp_matches(self.directory, {'version': '2.0.3'})
+
+    def test_mcp_registry_rejects_meaningful_and_malformed_changes(self):
+        expected = self.mcp_manifest()
+        r.write_json(self.directory / 'server.json', expected)
+        changes = [
+            (('name',), 'com.example/server'), (('version',), '2.0.4'),
+            (('packages', 0, 'identifier'), '@example/server'),
+            (('packages', 0, 'version'), '2.0.4'),
+            (('packages', 0, 'registryBaseUrl'), 'https://example.com'),
+            (('packages', 0, 'transport', 'type'), 'sse'),
+            (('packages', 1, 'identifier'), 'https://example.com/changed.mcpb'),
+            (('packages', 1, 'fileSha256'), 'b' * 64),
+            (('packages', 0, 'environmentVariables', 0, 'isSecret'), False),
+            (('packages', 0, 'environmentVariables', 1, 'format'), 'number'),
+        ]
+        for value in (True, None, 0, 'false'):
+            changes.append((('packages', 0, 'environmentVariables', 1, 'isRequired'), value))
+        for path, value in changes:
+            actual = copy.deepcopy(expected)
+            target = actual
+            for part in path[:-1]:
+                target = target[part]
+            target[path[-1]] = value
+            with self.subTest(path=path, value=value), patch.object(r, 'get_json', return_value={'server': actual}), self.assertRaisesRegex(RuntimeError, 'metadata differs'):
+                r.mcp_matches(self.directory, {'version': '2.0.3'})
+        for key in ('isRequired', 'isSecret'):
+            actual = copy.deepcopy(expected)
+            del actual['packages'][0]['environmentVariables'][0][key]
+            with self.subTest(missing=key), patch.object(r, 'get_json', return_value={'server': actual}), self.assertRaisesRegex(RuntimeError, 'metadata differs'):
+                r.mcp_matches(self.directory, {'version': '2.0.3'})
 
     def test_mcp_registry_failure_keeps_release_retryable(self):
         self.retained('mcp-server')
