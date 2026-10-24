@@ -643,7 +643,10 @@ def compare_zip(expected, actual):
 
 def verify_public(key, directory, record):
     version = record['version']
-    data = wait_for(lambda: registry(key, version), key + ' registry metadata')
+    # NuGet validates and signs accepted uploads asynchronously before download.
+    # Poll for roughly 30 minutes; the consumer job has a hard 45-minute limit.
+    data = wait_for(lambda: registry(key, version), key + ' registry metadata',
+                    attempts=91 if key == 'dotnet' else 30)
     if key in KEYS[:2]:
         raw = request(data['dist']['tarball'])
         expected = next(directory.glob('*.tgz')).read_bytes()
