@@ -3,7 +3,7 @@
 Go 1.24+. Standard-library runtime dependencies; compatible with ordinary Go HTTP frameworks, jobs and CLI programs.
 
 ```sh
-go get github.com/kompressrcdn/clients/sdk-go@v0.1.0
+go get github.com/kompressrcdn/clients/sdk-go@v0.1.1
 ```
 
 Integration helper; the caller constructs a client with `kompressr.New(kompressr.Config{APIKey: ...})` and supplies durable persistence:
