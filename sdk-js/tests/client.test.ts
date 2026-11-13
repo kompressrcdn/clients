@@ -193,3 +193,40 @@ it('accepts the API identity with an omitted empty display name and validates ty
   const listed = await platform.listUsers(); expect(listed.org_active_count).toBe(2); expect(listed.usage_period?.start).toBe('2026-10-01');
   await expect(platform.listUsers()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
 });
+
+describe('passthrough mode confirmation', () => {
+  it.each([true, false, undefined, 'true'])('requires a true acknowledgment: %s', async acknowledgment => {
+    let calls = 0;
+    const origin = await endpoint(async (request, response) => {
+      calls++; expect(request.url).toBe('/api/upload?passthrough=true');
+      const chunks = []; for await (const chunk of request) chunks.push(chunk);
+      const form = await new Request('http://fixture', {method:'POST',headers:{'Content-Type':request.headers['content-type']!},body:Buffer.concat(chunks)}).formData();
+      expect([...form.keys()]).toEqual(['file']);
+      response.end(JSON.stringify({success:true,data:{...accepted,status:'processed',asset_type:'file',passthrough:acknowledgment}}));
+    });
+    const files = new KompressrClient({apiKey:'fixture-key',apiBaseUrl:origin});
+    const result = files.uploadBytes(new Uint8Array(), 'empty', {passthrough:true});
+    if (acknowledgment === true) expect(await result).toMatchObject({id:42,status:'processed',passthrough:true});
+    else await expect(result).rejects.toMatchObject({code:'INVALID_RESPONSE',assetId:42,mayHaveSucceeded:true});
+    expect(calls).toBe(1);
+  });
+});
+
+
+describe('partial upload error recovery', () => {
+  it.each([403,409,500])('retains safe IDs on HTTP %s without replay', async status => {
+    for (const id of [42, 0, -1, 1.5, '42', null, Number.MAX_SAFE_INTEGER + 1]) {
+      let calls = 0;
+      const origin = await endpoint(async (request,response) => {
+        for await (const _ of request) { /* drain multipart */ }
+        calls++; response.writeHead(status, {'Content-Type':'application/json'});
+        response.end(JSON.stringify({success:false,code:'PASSTHROUGH_NOT_READY',error:'Check status.',asset_id:id,data:{asset_id:id}}));
+      });
+      const c = new KompressrClient({apiKey:'fixture',apiBaseUrl:origin});
+      await expect(c.uploadBytes(new Uint8Array(), 'empty', {passthrough:true})).rejects.toMatchObject({
+        status,code:'PASSTHROUGH_NOT_READY',assetId:id === 42 ? 42 : undefined,mayHaveSucceeded:id === 42 || status >= 500,
+      });
+      expect(calls).toBe(1);
+    }
+  });
+});

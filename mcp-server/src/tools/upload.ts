@@ -6,18 +6,19 @@ import { failure, NOT_CONFIGURED, result } from './result.js';
 import { KompressrError } from '@kompressr/sdk';
 
 export function uploadAssetTool(server: McpServer, client: KompressrClient, isConfigured: () => boolean): void {
-  server.tool('upload_asset', 'Upload a supported image, video, PDF, font or text asset. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly.', {
+  server.tool('upload_asset', 'Upload a supported image, video, PDF, font or text asset, or opt into exact-byte passthrough storage on an enabled eligible plan. Acceptance is not readiness: wait for processed before sharing. Project-user scoped upload keys restrict uploads to their identity. The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly.', {
     file_path: z.string().optional().describe('Local file path; provide exactly one file source'),
     file_url: z.string().url().optional().describe('HTTP(S) file downloaded on the MCP machine, then uploaded'),
+    passthrough: z.boolean().optional().describe('Store original bytes without optimization; requires an enabled eligible plan'),
     quality: z.enum(VALID_QUALITIES).optional().describe('Video quality only; availability depends on the plan'),
     visibility: z.enum(['public', 'private']).optional(),
     private_url_expires_in: z.number().int().min(60).max(604800).optional(),
     data: z.record(z.string(), z.union([z.string().max(512), z.number().finite(), z.boolean(), z.null()])).optional().describe('At most five scalar fields; UTF-8/encoded size limits apply'),
-  }, { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, async ({ file_path, file_url, quality, visibility, private_url_expires_in, data }, context) => {
+  }, { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, async ({ file_path, file_url, passthrough, quality, visibility, private_url_expires_in, data }, context) => {
     if (!isConfigured()) return { isError: true, content: [{ type: 'text' as const, text: NOT_CONFIGURED }] };
     if (!!file_path === !!file_url) return failure(new KompressrError('Provide exactly one of file_path or file_url.', { kind: 'validation', code: 'INVALID_ARGUMENT' }));
     try {
-      const options = { quality, visibility, privateUrlExpiresIn: private_url_expires_in, data, signal: context.signal };
+      const options = { passthrough, quality, visibility, privateUrlExpiresIn: private_url_expires_in, data, signal: context.signal };
       const response = file_path ? await client.uploadFile(file_path, options) : await client.uploadFromUrl(file_url!, options);
       if (!response.success || !response.data) throw new KompressrError(response.error ?? 'Upload failed.', { kind: 'api', code: 'API_ERROR' });
       const asset = response.data;

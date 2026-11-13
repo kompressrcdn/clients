@@ -9,7 +9,11 @@ public final class Models {
     public record UploadAccepted(long id, String status, String deletionStatus, String visibility,
         String originalName, long originalSize, String assetType, String deletionRequestedAt,
         String cdnUrl, String cdnUrlAvif, String privateUrl, String privateUrlExpiresAt,
-        Map<String, Object> data, String externalId, Map<String, String> options, String quality, String warning) {
+        Map<String, Object> data, String externalId, Map<String, String> options, String quality, String warning, Boolean passthrough) {
+        public UploadAccepted(long id, String status, String deletionStatus, String visibility,
+        String originalName, long originalSize, String assetType, String deletionRequestedAt,
+        String cdnUrl, String cdnUrlAvif, String privateUrl, String privateUrlExpiresAt,
+        Map<String, Object> data, String externalId, Map<String, String> options, String quality, String warning) { this(id, status, deletionStatus, visibility, originalName, originalSize, assetType, deletionRequestedAt, cdnUrl, cdnUrlAvif, privateUrl, privateUrlExpiresAt, data, externalId, options, quality, warning, null); }
         @Override public String toString() { return "UploadAccepted[id=" + id + ", status=" + status + "]"; }
     }
     public record UploadAsset(long id, String status, String deletionStatus, String visibility,
@@ -17,7 +21,13 @@ public final class Models {
         String cdnUrl, String cdnUrlAvif, String privateUrl, String privateUrlExpiresAt,
         Map<String, Object> data, String externalId, Map<String, String> options, String quality, String warning,
         long kompressdSize, double savingsPercent, boolean canGeneratePrivateUrl,
-        String inputFormat, String outputFormat, String createdAt) {
+        String inputFormat, String outputFormat, String createdAt, Boolean passthrough) {
+        public UploadAsset(long id, String status, String deletionStatus, String visibility,
+        String originalName, long originalSize, String assetType, String deletionRequestedAt,
+        String cdnUrl, String cdnUrlAvif, String privateUrl, String privateUrlExpiresAt,
+        Map<String, Object> data, String externalId, Map<String, String> options, String quality, String warning,
+        long kompressdSize, double savingsPercent, boolean canGeneratePrivateUrl,
+        String inputFormat, String outputFormat, String createdAt) { this(id, status, deletionStatus, visibility, originalName, originalSize, assetType, deletionRequestedAt, cdnUrl, cdnUrlAvif, privateUrl, privateUrlExpiresAt, data, externalId, options, quality, warning, kompressdSize, savingsPercent, canGeneratePrivateUrl, inputFormat, outputFormat, createdAt, null); }
         @Override public String toString() { return "UploadAsset[id=" + id + ", status=" + status + "]"; }
     }
     public record PrivateUrl(long assetId, String variant, String privateUrl, String expiresAt, int expiresIn) {

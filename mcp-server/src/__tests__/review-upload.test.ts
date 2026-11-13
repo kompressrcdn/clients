@@ -96,3 +96,32 @@ it.each(['local', 'remote'])('MCP cancellation reaches an already-dispatched %s 
   expect(uploads).toBe(1); expect(failure).toMatchObject({ code: 'REQUEST_CANCELLED', mayHaveSucceeded: true });
   for (const candidate of tracked.directories.filter(value => value.includes('kompressr-download-'))) await expect(access(candidate)).rejects.toThrow();
 });
+
+it.each([true, false, undefined])('confirms requested passthrough mode through MCP: %s', async ack => {
+  const directory = await mkdtemp(join(tmpdir(), 'raw-mcp-')); cleanups.push(() => rm(directory, {recursive:true,force:true}));
+  const path = join(directory, 'empty'); await writeFile(path, ''); let calls = 0;
+  const api = await endpoint(async (request, response) => {
+    calls++; expect(request.url).toBe('/api/upload?passthrough=true');
+    for await (const chunk of request) { void chunk; }
+    response.end(JSON.stringify({success:true,data:{...accepted,id:undefined,asset_id:42,status:'processed',asset_type:'file',passthrough:ack,cdn_url:'https://cdn.example/files/raw.bin'}}));
+  });
+  const {client} = await connected(api);
+  const result = await client.callTool({name:'upload_asset',arguments:{file_path:path,passthrough:true}});
+  expect(Boolean(result.isError)).toBe(ack !== true); expect(JSON.stringify(result)).toContain('42'); expect(calls).toBe(1);
+});
+
+
+it.each([403,409,500])('MCP retains partial upload recovery on HTTP %s', async status => {
+  const directory=await mkdtemp(join(tmpdir(),'raw-mcp-error-'));cleanups.push(()=>rm(directory,{recursive:true,force:true}));
+  const path=join(directory,'empty');await writeFile(path,'');let calls=0;
+  const api=await endpoint(async(request,response)=>{
+    calls++;for await(const chunk of request){void chunk;}
+    response.writeHead(status,{'Content-Type':'application/json'});
+    response.end(JSON.stringify({success:false,code:'PASSTHROUGH_NOT_READY',error:'Check status.',data:{asset_id:42}}));
+  });
+  const {client}=await connected(api);
+  const result=await client.callTool({name:'upload_asset',arguments:{file_path:path,passthrough:true}});
+  expect(result.isError).toBe(true);
+  expect(result.structuredContent).toMatchObject({ assetId: 42, mayHaveSucceeded: true });
+  expect(calls).toBe(1);
+});

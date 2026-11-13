@@ -139,6 +139,9 @@ func (c *Client) UploadReader(ctx context.Context, source io.ReadCloser, size in
 	suffix := bytes.Clone(buffer.Bytes())
 	body := &multipartBody{Reader: io.MultiReader(bytes.NewReader(prefix), &exactReader{r: owner, remaining: size}, bytes.NewReader(suffix)), source: owner}
 	r := request{method: "POST", path: "/api/upload", body: body, length: size + int64(len(prefix)+len(suffix)), contentType: form.FormDataContentType(), upload: true, recoverID: true, options: o.RequestOptions}
+	if o.Passthrough != nil {
+		r.path += "?passthrough=" + strconv.FormatBool(*o.Passthrough)
+	}
 	return perform(ctx, c.t, r, func(raw json.RawMessage) (UploadAccepted, error) {
 		m, e := success(raw)
 		if e != nil {
@@ -147,6 +150,9 @@ func (c *Client) UploadReader(ctx context.Context, source io.ReadCloser, size in
 		result, e := parseUpload(m["data"], true)
 		if e != nil {
 			return zero, e
+		}
+		if o.Passthrough != nil && *o.Passthrough && (result.Passthrough == nil || !*result.Passthrough) {
+			return zero, badResponse()
 		}
 		if v, ok := m["warning"]; ok {
 			var warning string

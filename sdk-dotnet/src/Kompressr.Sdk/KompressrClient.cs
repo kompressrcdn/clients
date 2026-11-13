@@ -33,7 +33,7 @@ public sealed class KompressrClient
         using var content = new StreamContent(file, 64 * 1024);
         content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         form.Add(content, "file", Path.GetFileName(path));
-        return await transport.SendAsync("/api/upload", HttpMethod.Post, Validation.Accepted, options, cancellationToken, form, upload: true, recoverUploadId: true).ConfigureAwait(false);
+        return await transport.SendAsync(UploadPath(options), HttpMethod.Post, body => ConfirmUpload(body, options), options, cancellationToken, form, upload: true, recoverUploadId: true).ConfigureAwait(false);
     }
     public Task<UploadAccepted> UploadBytesAsync(ReadOnlyMemory<byte> bytes, string filename, UploadOptions? options = null, CancellationToken cancellationToken = default)
     {
@@ -45,9 +45,16 @@ public sealed class KompressrClient
             var content = new ByteArrayContent(bytes.ToArray());
             content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
             form.Add(content, "file", Path.GetFileName(filename));
-            return transport.SendAsync("/api/upload", HttpMethod.Post, Validation.Accepted, options, cancellationToken, form, upload: true, recoverUploadId: true);
+            return transport.SendAsync(UploadPath(options), HttpMethod.Post, body => ConfirmUpload(body, options), options, cancellationToken, form, upload: true, recoverUploadId: true);
         }
         catch { form.Dispose(); throw; }
+    }
+    private static string UploadPath(UploadOptions? options) => "/api/upload" + (options?.Passthrough is bool flag ? "?passthrough=" + (flag ? "true" : "false") : "");
+    private static UploadAccepted ConfirmUpload(JsonElement body, UploadOptions? options)
+    {
+        var result = Validation.Accepted(body);
+        if (options?.Passthrough == true && result.Passthrough != true) throw KompressrException.BadResponse();
+        return result;
     }
     private static MultipartFormDataContent Multipart(string filename, UploadOptions? options)
     {

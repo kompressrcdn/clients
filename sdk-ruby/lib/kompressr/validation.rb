@@ -155,6 +155,7 @@ module Kompressr
       result['original_size'] = nonnegative(v['original_size'])
       string(v['original_name']) if accepted
       string(v['asset_type'])
+      result['passthrough'] = boolean(v['passthrough']) if v.key?('passthrough')
       optional_strings(v, %w[original_name deletion_requested_at external_id created_at input_format output_format private_url_expires_at warning])
       urls(v)
       bad('Private asset response contains a public URL.') if v['visibility'] == 'private' && %w[cdn_url cdn_url_avif].any? { |name| v.key?(name) }

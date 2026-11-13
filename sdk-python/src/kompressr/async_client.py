@@ -176,7 +176,7 @@ class AsyncKompressrClient:
         self.platform = AsyncPlatformClient(api_key=api_key, api_base_url=api_base_url, upload_base_url=upload_base_url,
             request_timeout=request_timeout, upload_timeout=upload_timeout, max_read_retries=max_read_retries)
 
-    async def upload_file(self, path: str | os.PathLike[str], *, visibility: Visibility | None = None,
+    async def upload_file(self, path: str | os.PathLike[str], *, passthrough: bool | None = None, visibility: Visibility | None = None,
                           quality: VideoQuality | None = None, data: CustomerData | None = None,
                           private_url_expires_in: int | None = None, timeout: float | None = None,
                           cancel: CancellationToken | None = None) -> UploadAccepted:
@@ -187,22 +187,25 @@ class AsyncKompressrClient:
         if not file_path.is_file():
             raise FileNotFoundError('Upload path must name a regular file.')
         with file_path.open('rb') as stream:
-            return await self.upload_stream(stream, file_path.name, visibility=visibility, quality=quality, data=data,
+            return await self.upload_stream(stream, file_path.name, passthrough=passthrough, visibility=visibility, quality=quality, data=data,
                 private_url_expires_in=private_url_expires_in, timeout=timeout, cancel=cancel)
 
-    async def upload_bytes(self, content: bytes | bytearray | memoryview, filename: str, *,
+    async def upload_bytes(self, content: bytes | bytearray | memoryview, filename: str, *, passthrough: bool | None = None,
                            visibility: Visibility | None = None, quality: VideoQuality | None = None,
                            data: CustomerData | None = None, private_url_expires_in: int | None = None,
                            timeout: float | None = None, cancel: CancellationToken | None = None) -> UploadAccepted:
         if not isinstance(content, (bytes, bytearray, memoryview)):
             invalid('content must be bytes, bytearray or memoryview.')
-        return await self.upload_stream(io.BytesIO(bytes(content)), filename, visibility=visibility, quality=quality,
+        return await self.upload_stream(io.BytesIO(bytes(content)), filename, passthrough=passthrough, visibility=visibility, quality=quality,
             data=data, private_url_expires_in=private_url_expires_in, timeout=timeout, cancel=cancel)
 
-    async def upload_stream(self, stream: BinaryIO, filename: str, *, visibility: Visibility | None = None,
+    async def upload_stream(self, stream: BinaryIO, filename: str, *, passthrough: bool | None = None, visibility: Visibility | None = None,
                             quality: VideoQuality | None = None, data: CustomerData | None = None,
                             private_url_expires_in: int | None = None, timeout: float | None = None,
                             cancel: CancellationToken | None = None) -> UploadAccepted:
+        if passthrough is not None and type(passthrough) is not bool:
+            invalid('passthrough must be a boolean.')
+        path = '/api/upload' + ('' if passthrough is None else '?passthrough=' + str(passthrough).lower())
         name = _filename(filename)
         if type(stream) not in (io.BytesIO, io.BufferedReader, io.FileIO):
             invalid('stream must be an unmodified BytesIO or a standard regular binary file; custom readers are unsupported.')
@@ -229,10 +232,12 @@ class AsyncKompressrClient:
         def parse(value: Any) -> UploadAccepted:
             response = v.success(value)
             result = v.upload_accepted(response.get('data'))
+            if passthrough is True and result.get('passthrough') is not True:
+                invalid_response('Passthrough mode was not confirmed; inspect the saved asset ID before retrying.')
             if isinstance(response.get('warning'), str):
                 result['warning'] = response['warning']
             return result
-        return await self._transport.request('/api/upload', method='POST', fields=fields, file=(name, stream), parse=parse,
+        return await self._transport.request(path, method='POST', fields=fields, file=(name, stream), parse=parse,
             upload=True, recover_upload_id=True, timeout=timeout, cancel=cancel)
 
     async def get_upload_status(self, asset_id: int, *, timeout: float | None = None,

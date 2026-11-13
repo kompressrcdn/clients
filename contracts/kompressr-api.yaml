@@ -6,6 +6,7 @@ info:
 servers:
   - url: https://kompressr.com
     description: Production management and platform API
+
 security:
   - bearerAuth: []
 paths:
@@ -241,11 +242,18 @@ paths:
       servers:
         - url: https://uploads.kompressr.com
           description: Production upload bodies
+
       summary: Upload an asset
       operationId: uploadAsset
-      description: Put all multipart options before the file part; fields after the file are not read. Acceptance is not readiness; save the asset ID and check status before sharing the current processed URL. You can reupload immediately after deletion. The new asset has a new ID and can reuse the same URL. A pending deletion alone does not prevent reupload. Normal permissions, plan limits, and service availability still apply.
+      description: Put all multipart options before the file part; fields after the file are not read. Normal upload acceptance is not readiness; passthrough succeeds with processed status and passthrough true; save the asset ID and check status before sharing the current processed URL. You can reupload immediately after deletion. The new asset has a new ID and can reuse the same URL. A pending deletion alone does not prevent reupload. Normal permissions, plan limits, and service availability still apply.
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: passthrough
+          required: false
+          schema: {type: boolean, default: false}
+          description: A single literal true stores exact original bytes as File (kind 11), without optimization or compression credits. False or absent preserves normal uploads. Pro/Growth/API/Enterprise require upload and passthrough enabled. Default caps are 250/500/1024/2048 MiB respectively; configured overrides apply. Empty and arbitrary files are supported. Optimization options are ignored. A separate organization rate pool defaults to 5 times non-video rates. Storage (one copy) and bandwidth remain metered. Multipart passthrough fields are rejected. Require passthrough true in the response before claiming original-byte success; retain any known asset ID on errors and never blindly replay.
       requestBody:
         required: true
         content:
@@ -285,6 +293,8 @@ paths:
         "400":
           $ref: "#/components/responses/Error"
         "403":
+          $ref: "#/components/responses/Error"
+        "413":
           $ref: "#/components/responses/Error"
         "429":
           $ref: "#/components/responses/Error"
@@ -1041,6 +1051,9 @@ components:
           type: object
           required: [asset_id, status, visibility, deletion_status, original_name, original_size, asset_type]
           properties:
+            passthrough:
+              type: boolean
+              description: True confirms exact-byte File storage; successful passthrough uploads are processed immediately.
             asset_id:
               type: integer
             status:
@@ -1094,6 +1107,9 @@ components:
       type: object
       required: [id, status, visibility, deletion_status, original_size, asset_type, kompressd_size, savings_percent, can_generate_private_url]
       properties:
+        passthrough:
+          type: boolean
+          description: True for File assets, with zero optimization savings and one stored copy.
         id:
           type: integer
         status:

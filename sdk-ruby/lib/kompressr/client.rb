@@ -176,7 +176,9 @@ module Kompressr
       Validation.positive(value, 'expires_in', 604_800)
       Validation.invalid('Private URL lifetime must be at least 60 seconds.') if value < 60
     end
-    def upload_source(source, size, name, visibility: nil, quality: nil, data: nil, private_url_expires_in: nil, timeout: nil, cancel: nil)
+    def upload_source(source, size, name, passthrough: nil, visibility: nil, quality: nil, data: nil, private_url_expires_in: nil, timeout: nil, cancel: nil)
+      Validation.invalid('passthrough must be a boolean.') unless passthrough.nil? || passthrough.equal?(true) || passthrough.equal?(false)
+      path = '/api/upload' + (passthrough.nil? ? '' : "?passthrough=#{passthrough}")
       fields = {}
       fields['visibility'] = Validation.enum(visibility, %w[public private], 'visibility') unless visibility.nil?
       fields['kmp-quality'] = Validation.enum(quality, %w[480p 720p 1080p 4k], 'quality') unless quality.nil?
@@ -186,9 +188,10 @@ module Kompressr
         fields['private_url_expires_in'] = private_url_expires_in.to_s
       end
       body = Internal::Multipart.new(source, size, name, fields)
-      @transport.request('/api/upload', method: 'POST', multipart: body, upload: true, timeout: timeout, cancel: cancel, recover_upload_id: true) do |value|
+      @transport.request(path, method: 'POST', multipart: body, upload: true, timeout: timeout, cancel: cancel, recover_upload_id: true) do |value|
         response = Validation.success(value)
         result = Validation.upload(response['data'], accepted: true)
+        Validation.bad('Passthrough mode was not confirmed; inspect the saved asset ID before retrying.') if passthrough == true && result['passthrough'] != true
         result['warning'] = response['warning'] if response['warning'].instance_of?(String)
         result
       end

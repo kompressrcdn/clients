@@ -311,6 +311,12 @@ func parseUpload(raw json.RawMessage, accepted bool) (UploadAccepted, error) {
 	if err = stringFields(m, false, "deletion_requested_at", "external_id", "created_at", "input_format", "output_format", "private_url_expires_at", "quality", "warning"); err != nil {
 		return out, err
 	}
+	if v, ok := m["passthrough"]; ok {
+		var flag bool
+		if !nonnull(v) || json.Unmarshal(v, &flag) != nil {
+			return out, badResponse()
+		}
+	}
 	// Acceptance uses asset_id on the wire. Ignore any unrelated id extension;
 	// both accepted and existing upload records decode through the canonical ID.
 	m["id"] = m[idName]

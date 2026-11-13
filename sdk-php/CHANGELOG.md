@@ -1,4 +1,9 @@
 # Changelog
+## Unreleased
+
+- Add optional passthrough uploads, immediate ready File results, and explicit mode confirmation with safe asset-ID recovery.
+- Preserve validated asset IDs and write uncertainty on partial upload errors, including HTTP 403/409/500, without replaying uploads.
+
 
 ## 0.1.0
 

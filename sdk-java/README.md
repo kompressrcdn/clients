@@ -88,3 +88,15 @@ This runs local HTTP fixtures, builds main/source/Javadoc JARs, installs the pac
 Runtime dependencies are Apache HttpClient 5 and Jackson 2.21 LTS. HttpClient's automatic retries, redirects and cookies are disabled; the SDK controls retries and cancellation. HttpClient uses SLF4J: configure your application's normal logging provider if desired, and avoid enabling HTTP wire/header logging with real credentials.
 
 See [changelog](https://github.com/kompressrcdn/clients/blob/main/sdk-java/CHANGELOG.md) and [MIT license](https://github.com/kompressrcdn/clients/blob/main/sdk-java/LICENSE).
+
+## Store original bytes
+
+```java
+files.uploadFile(Path.of("archive.zip"), Options.Upload.DEFAULT.withPassthrough(true));
+```
+
+When enabled on Pro, Growth, API or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

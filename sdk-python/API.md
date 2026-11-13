@@ -104,6 +104,18 @@ Eligible GET network errors and HTTP 429/502/503/504 retry with bounded backoff;
 
 If a server rejects a large upload before reading its body and closes the connection, HTTPX can report a write/network error before exposing the HTTP response. The SDK then returns `NETWORK_ERROR` with `may_have_succeeded=True`, rather than the server's rejection status. Inspect the upload outcome before retrying; the SDK does not replay it automatically.
 
-A dispatched mutation can have succeeded despite timeout, network failure, task cancellation, rejected redirect, server failure, or invalid successful data. These errors set `may_have_succeeded=True`. Pre-dispatch cancellation and local validation set it false. A false value does not certify that replaying an entire application workflow is safe. Single-asset writes retain the requested ID. Upload recovery only trusts a positive safe numeric `data.asset_id` from a parsed successful envelope; broken JSON has no recoverable ID. Bulk errors never choose one arbitrary ID.
+A dispatched mutation can have succeeded despite timeout, network failure, task cancellation, rejected redirect, server failure, or invalid successful data. These errors set `may_have_succeeded=True`. Pre-dispatch cancellation and local validation set it false. A false value does not certify that replaying an entire application workflow is safe. Single-asset writes retain the requested ID. Upload recovery only trusts a positive safe numeric `data.asset_id` from a parsed envelope with boolean `success`, including failed envelopes and non-2xx responses; broken JSON has no recoverable ID. A recovered upload ID sets `may_have_succeeded=True` so callers can check retained work without replaying it. Bulk errors never choose one arbitrary ID.
 
 `CancellationToken.cancel()` is thread-safe; pass the token as `cancel=`. Cancellation is checked before dispatch and during network activity/backoff with a small polling interval. Token cancellation raises `KompressrError`; native asyncio task cancellation raises `KompressrCancelledError`, retaining `asyncio.CancelledError` semantics and the same metadata. Catch native cancellation only for cleanup, then re-raise. Native task cancellation before a coroutine starts cannot attach SDK metadata because no SDK code has run. Standard local file errors may occur before a request and remain native Python exceptions.
+
+## Store original bytes
+
+```python
+files.upload_file('archive.zip', passthrough=True)
+```
+
+When enabled on Pro, Growth, API or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

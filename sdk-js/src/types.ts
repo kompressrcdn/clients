@@ -16,6 +16,7 @@ export interface ClientOptions {
 }
 export interface RequestOptions { signal?: AbortSignal; timeoutMs?: number }
 export interface UploadOptions extends RequestOptions {
+  passthrough?: boolean;
   visibility?: Visibility;
   quality?: VideoQuality;
   data?: CustomerData;
@@ -23,6 +24,7 @@ export interface UploadOptions extends RequestOptions {
 }
 /** Acceptance is not readiness. Save id before waiting or returning a link. */
 export interface UploadAccepted {
+  passthrough?: boolean;
   id: number;
   status: ProcessingStatus;
   deletion_status: DeletionStatus;

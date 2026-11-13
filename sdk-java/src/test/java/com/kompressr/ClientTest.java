@@ -72,6 +72,34 @@ class ClientTest {
             assertEquals(List.of("POST /api/upload", "GET /api/upload/42/status"), requests);
         } finally { Files.delete(path); }
     }
+    @ParameterizedTest @ValueSource(strings = {"true", "false", "missing", "invalid"})
+    void passthroughConfirmation(String ack) throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        serve(x -> {
+            calls.incrementAndGet(); assertEquals("passthrough=true", x.getRequestURI().getQuery());
+            String body = new String(x.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            assertFalse(body.contains("name=\"passthrough\""));
+            var data = accepted(); data.put("status", "processed").put("asset_type", "file");
+            if (ack.equals("invalid")) data.put("passthrough", "true");
+            else if (!ack.equals("missing")) data.put("passthrough", ack.equals("true"));
+            send(x, 200, envelope(data));
+        });
+        try (var c = client()) {
+            if (ack.equals("true")) assertEquals(true, c.uploadBytes(new byte[0], "empty", Options.Upload.DEFAULT.withPassthrough(true)).passthrough());
+            else { var error = assertThrows(KompressrException.class, () -> c.uploadBytes(new byte[0], "empty", Options.Upload.DEFAULT.withPassthrough(true))); assertEquals("INVALID_RESPONSE", error.code()); assertEquals(42L, error.assetId()); assertTrue(error.mayHaveSucceeded()); }
+            assertEquals(1, calls.get());
+        }
+    }
+    @ParameterizedTest @ValueSource(ints={403,409,500})
+    void partialUploadRecovery(int status) throws Exception {
+        AtomicInteger calls=new AtomicInteger();
+        serve(x -> { x.getRequestBody().readAllBytes(); calls.incrementAndGet();
+            send(x,status,Validation.JSON.readTree("{\"success\":false,\"code\":\"PASSTHROUGH_NOT_READY\",\"data\":{\"asset_id\":42}}")); });
+        try(var c=client()) {
+            var e=assertThrows(KompressrException.class,()->c.uploadBytes(new byte[0],"empty",Options.Upload.DEFAULT.withPassthrough(true)));
+            assertEquals(42L,e.assetId());assertTrue(e.mayHaveSucceeded());assertEquals(status,e.status());assertEquals(1,calls.get());
+        }
+    }
     @Test void bytesSendSelectedContent() throws Exception {
         AtomicInteger calls = new AtomicInteger();
         serve(x -> { String body = new String(x.getRequestBody().readAllBytes(), StandardCharsets.UTF_8); assertTrue(body.contains("payload")); calls.incrementAndGet(); send(x, 200, envelope(accepted())); });

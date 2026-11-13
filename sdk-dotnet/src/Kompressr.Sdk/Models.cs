@@ -3,6 +3,7 @@ namespace Kompressr.Sdk;
 
 public class UploadAccepted
 {
+    public bool? Passthrough { get; init; }
     public long Id { get; init; }
     public required string Status { get; init; }
     public required string DeletionStatus { get; init; }

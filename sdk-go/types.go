@@ -71,6 +71,7 @@ func (c Config) GoString() string { return c.String() }
 
 type RequestOptions struct{ Timeout time.Duration }
 type UploadOptions struct {
+	Passthrough *bool
 	RequestOptions
 	Visibility          Visibility
 	Quality             string
@@ -115,6 +116,7 @@ type Page[T any] struct {
 
 // UploadAccepted means the server accepted work, not that delivery is ready.
 type UploadAccepted struct {
+	Passthrough         *bool             `json:"passthrough,omitempty"`
 	ID                  int64             `json:"id"`
 	Status              ProcessingStatus  `json:"status"`
 	DeletionStatus      DeletionStatus    `json:"deletion_status"`

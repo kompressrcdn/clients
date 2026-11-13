@@ -164,6 +164,7 @@ internal static class Validation
         EnumValue(Field(value, "deletion_status"), Deletions);
         Integer(Field(value, "original_size"), 0);
         String(Field(value, "asset_type"));
+        if (value.TryGetProperty("passthrough", out var passthrough)) Boolean(passthrough);
         if (accepted) String(Field(value, "original_name"));
         Strings(value, "original_name", "deletion_requested_at", "external_id", "created_at", "input_format", "output_format", "private_url_expires_at", "warning");
         foreach (var key in new[] { "cdn_url", "cdn_url_avif", "private_url" })

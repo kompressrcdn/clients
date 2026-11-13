@@ -484,7 +484,7 @@ module Kompressr
               Validation.bad unless status
               context.retry_after_ms = self.class.retry_after(head, parsed) if head
               context.check!
-              if recover_upload_id && status.between?(200, 299) && parsed.instance_of?(Hash) && parsed['success'] == true && parsed['data'].instance_of?(Hash)
+              if recover_upload_id && parsed.instance_of?(Hash) && [true, false].include?(parsed['success']) && parsed['data'].instance_of?(Hash)
                 candidate = parsed['data']['asset_id']
                 context.asset_id = candidate.to_i if Validation.finite?(candidate) && candidate.positive? && candidate <= Validation::MAX_SAFE && candidate == candidate.to_i
               end
@@ -495,7 +495,7 @@ module Kompressr
                 code = 'API_ERROR' unless code.instance_of?(String) && /\A[A-Z][A-Z0-9_]{0,99}\z/.match?(code) && !code.include?(@key)
                 raise Error.new(safe_message(data['error'] || "Kompressr returned HTTP #{status}."), kind: 'api', code: code,
                                 status: status, retry_after_ms: context.retry_after_ms, asset_id: context.asset_id,
-                                may_have_succeeded: method != 'GET' && (status < 400 || status >= 500)), cause: nil
+                                may_have_succeeded: method != 'GET' && (status < 400 || status >= 500 || (recover_upload_id && !context.asset_id.nil?))), cause: nil
               end
               result = parse.call(parsed)
               context.check!

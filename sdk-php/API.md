@@ -105,4 +105,16 @@ Project user rows contain `id`, `project_id`, `customer_user_id`, `status`, and 
 
 `KompressrException` has `kind` (`validation`, `api`, `network`, `timeout`, `cancelled`, `invalid_response`, `processing`), `errorCode`, optional `status`, `retryAfterMs`, `assetId`, and boolean `mayHaveSucceeded`. Retry delays larger than PHP's integer range saturate to `PHP_INT_MAX` milliseconds before conversion; the request deadline still bounds the wait. API errors preserve safe service codes, status and retry hints; messages redact credentials and URLs. Raw cURL errors and response pages are not exposed. SDK exception traces retain call sites but omit arguments and object references, including on PHP 8.1; the SDK does not change process-wide exception settings.
 
-A dispatched mutation that loses its response, receives malformed success data, or encounters an uncertain server/redirect response may have succeeded. Do not replay it automatically. Upload recovery IDs are accepted only from parsed `success:true` envelopes containing a valid numeric `data.asset_id`. Single-asset mutations retain the requested ID; bulk failures do not choose an arbitrary one.
+A dispatched mutation that loses its response, receives malformed success data, or encounters an uncertain server/redirect response may have succeeded. Do not replay it automatically. Upload recovery IDs are accepted only from parsed envelopes with boolean `success` and a valid numeric `data.asset_id`, including failed envelopes and non-2xx responses. A recovered upload ID sets `mayHaveSucceeded=true` so callers can check retained work without replaying it. Single-asset mutations retain the requested ID; bulk failures do not choose an arbitrary one.
+
+## Store original bytes
+
+```php
+$client->uploadFile('archive.zip', ['passthrough' => true]);
+```
+
+When enabled on Pro, Growth, API or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.
