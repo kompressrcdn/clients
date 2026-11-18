@@ -158,6 +158,8 @@ def upload(value: Any, *, accepted: bool = False) -> dict[str, Any]:
     else:
         optional_strings(v, ('original_name',))
     string(v.get('asset_type'))
+    if 'passthrough' in v and type(v['passthrough']) is not bool:
+        invalid_response()
     optional_strings(v, ('deletion_requested_at', 'external_id', 'created_at', 'input_format', 'output_format', 'private_url_expires_at'))
     safe_urls(v)
     if v['visibility'] == 'private' and any(k in v for k in ('cdn_url', 'cdn_url_avif')):

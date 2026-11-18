@@ -81,7 +81,7 @@ internal sealed class Transport
                     {
                         var body = document?.RootElement ?? default;
                         retryAfter = RetryDelay(response, body);
-                        if (recoverUploadId && ok && body.ValueKind == JsonValueKind.Object && body.TryGetProperty("success", out var success) && success.ValueKind == JsonValueKind.True && body.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object && data.TryGetProperty("asset_id", out var id))
+                        if (recoverUploadId && body.ValueKind == JsonValueKind.Object && body.TryGetProperty("success", out var success) && (success.ValueKind == JsonValueKind.True || success.ValueKind == JsonValueKind.False) && body.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object && data.TryGetProperty("asset_id", out var id))
                         {
                             try { assetId = Validation.Integer(id, 1); } catch (KompressrException) { }
                         }
@@ -97,7 +97,7 @@ internal sealed class Transport
                             var message = body.ValueKind == JsonValueKind.Object && body.TryGetProperty("error", out var errorValue) && errorValue.ValueKind == JsonValueKind.String
                                 ? SafeMessage(errorValue.GetString()!) : $"Kompressr returned HTTP {responseStatus}.";
                             throw new KompressrException(message, "api", code, responseStatus, retryAfter, assetId,
-                                write && (ok || responseStatus >= 500 || responseStatus is >= 300 and < 400));
+                                write && (ok || responseStatus >= 500 || responseStatus is >= 300 and < 400 || recoverUploadId && assetId.HasValue));
                         }
                         token.ThrowIfCancellationRequested();
                         try

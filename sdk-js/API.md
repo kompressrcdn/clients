@@ -1,6 +1,6 @@
 # SDK API reference
 
-This reference describes the `1.0.0` client. Import `KompressrClient`, `PlatformClient`, `KompressrError` and the exported TypeScript types from `@kompressr/sdk`. The package provides ESM and CommonJS entry points. All methods are asynchronous unless described otherwise.
+This reference describes the `1.1.0` client. Import `KompressrClient`, `PlatformClient`, `KompressrError` and the exported TypeScript types from `@kompressr/sdk`. The package provides ESM and CommonJS entry points. All methods are asynchronous unless described otherwise.
 
 ## Constructor
 
@@ -106,6 +106,18 @@ These methods use `client.platform` or a standalone `PlatformClient`. `RequestOp
 
 `KompressrError` extends Error; `toJSON()` returns its safe public fields. `kind` is `validation`, `api`, `network`, `timeout`, `cancelled`, `invalid_response`, or `processing`. `code` contains the server's code where supplied, or a client code such as `INVALID_ARGUMENT`, `INVALID_RESPONSE`, `NETWORK_ERROR`, `REQUEST_TIMEOUT`, `REQUEST_CANCELLED`, `WAIT_TIMEOUT`, `WAIT_CANCELLED`, `PROCESSING_FAILED`, `ASSET_DELETED`. Optional fields are HTTP `status`, `retryAfterMs`, `assetId`. `mayHaveSucceeded` is true when a dispatched write has an ambiguous outcome, including malformed JSON, incomplete/mismatched successful response data, interruption, or a server failure; false does not certify the safety of retrying an application-level workflow.
 
-A request cancelled before dispatch reports `mayHaveSucceeded: false` and sends nothing. Cancellation after dispatch cannot undo accepted server work. Malformed write responses preserve HTTP status and the validated requested asset ID for single-asset operations; malformed upload acceptance can recover only a positive safe-integer `data.asset_id` from a successfully parsed `success: true` envelope. Broken JSON and unsafe IDs are never guessed; bulk errors do not choose an arbitrary single asset ID. One-time secrets from malformed key responses are never included in errors.
+A request cancelled before dispatch reports `mayHaveSucceeded: false` and sends nothing. Cancellation after dispatch cannot undo accepted server work. Malformed write responses preserve HTTP status and the validated requested asset ID for single-asset operations; upload errors can recover only a positive safe-integer `data.asset_id` from a parsed envelope with boolean `success`, including failed envelopes and non-2xx responses. A recovered upload ID sets `mayHaveSucceeded: true` so callers can check retained work without replaying it. Broken JSON and unsafe IDs are never guessed; bulk errors do not choose an arbitrary single asset ID. One-time secrets from malformed key responses are never included in errors.
 
 Only eligible GET network/429/502/503/504 failures automatically retry. Retry-After is respected within the deadline. Upload, sign, delete, provision, rotate and revoke are not automatically replayed. Readiness polling is separate from request retries. Native local-file errors can occur before any HTTP write; SDK validation uses KompressrError. Always handle request/deadline failures and keep the accepted ID in your application.
+
+## Store original bytes
+
+```js
+await files.uploadFile('./archive.zip', { passthrough: true });
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

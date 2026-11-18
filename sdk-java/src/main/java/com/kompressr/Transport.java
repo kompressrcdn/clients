@@ -143,7 +143,7 @@ final class Transport implements AutoCloseable {
                             catch (IOException e) { throw KompressrException.response(); }
                         }
                     } catch (KompressrException e) { if (ok) throw e; }
-                    if (recoverId && ok && root != null && root.path("success").isBoolean() && root.path("success").booleanValue()) {
+                    if (recoverId && root != null && root.path("success").isBoolean()) {
                         var id = root.path("data").get("asset_id");
                         if (id != null && id.isIntegralNumber() && id.canConvertToLong() && id.longValue() > 0 && id.longValue() <= Validation.MAX_SAFE) recovered.set(id.longValue());
                     }
@@ -151,7 +151,7 @@ final class Transport implements AutoCloseable {
                         String message = root != null && root.path("error").isTextual() ? root.get("error").textValue() : "Kompressr returned HTTP " + code + ".";
                         String errorCode = root != null && root.path("code").isTextual() ? root.get("code").textValue() : "API_ERROR";
                         String header = response.getFirstHeader("Retry-After") == null ? null : response.getFirstHeader("Retry-After").getValue();
-                        throw new KompressrException(KompressrException.safe(message, key), "api", KompressrException.safe(errorCode, key), code, retryAfter(header, root), recovered.get(), !read && (ok || code >= 500 || code >= 300 && code < 400));
+                        throw new KompressrException(KompressrException.safe(message, key), "api", KompressrException.safe(errorCode, key), code, retryAfter(header, root), recovered.get(), !read && (ok || code >= 500 || code >= 300 && code < 400 || recoverId && recovered.get() != null));
                     }
                     try { return parse.apply(root); }
                     catch (KompressrException e) { throw e; }

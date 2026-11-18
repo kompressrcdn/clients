@@ -17,6 +17,7 @@ public class RequestOptions
 }
 public sealed class UploadOptions : RequestOptions
 {
+    public bool? Passthrough { get; init; }
     public string? Visibility { get; init; }
     public string? Quality { get; init; }
     public IReadOnlyDictionary<string, object?>? Data { get; init; }

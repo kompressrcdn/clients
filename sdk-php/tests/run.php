@@ -61,6 +61,26 @@ try {
             check($growth < 8 * 1024 * 1024, 'File upload buffered the file in PHP memory'); check($s->requests()[0]['size'] > 32 * 1024 * 1024);
         } finally { unlink($path); }
     });
+    test('partial upload error recovery', function (): void {
+        foreach ([403,409,500] as $status) {
+            foreach ([42,0,-1,1.5,'42',null,9007199254740992] as $id) {
+                $s=fixtureServer(['success'=>false,'code'=>'PASSTHROUGH_NOT_READY','data'=>['asset_id'=>$id]],$status);
+                failure(fn()=>$s->client()->uploadBytes('', 'empty', ['passthrough'=>true]),'api',$id===42 || $status>=500,$id===42 ? 42 : null);
+                check(count($s->requests())===1);
+            }
+        }
+    });
+    test('passthrough confirmation', function () use ($fixture): void {
+        foreach ([true, false, null, 'true'] as $ack) {
+            $data = $fixture['accepted']; $data['status'] = 'processed'; $data['asset_type'] = 'file';
+            if ($ack !== null) $data['passthrough'] = $ack;
+            $server = fixtureServer(['success' => true, 'data' => $data]);
+            if ($ack === true) check($server->client()->uploadBytes('', 'empty', ['passthrough' => true])['passthrough'] === true);
+            else failure(fn() => $server->client()->uploadBytes('', 'empty', ['passthrough' => true]), 'invalid_response', true, 42);
+            $requests = $server->requests(); check(count($requests) === 1); check($requests[0]['line'] === 'POST /api/upload?passthrough=true HTTP/1.1');
+            check(!str_contains($requests[0]['body'], 'name="passthrough"'));
+        }
+    });
     test('SDK exception traces omit credentials and payloads with argument capture enabled', function (): void {
         $original = ini_set('zend.exception_ignore_args', '0');
         try {

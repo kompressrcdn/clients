@@ -33,7 +33,7 @@ Keep the management and upload origins configurable for local tests, with produc
 4. Read a bounded JSON response. Validate `success=true` and a positive integer `data.asset_id` in the compatibility range. Reject booleans, numeric strings and fractional IDs.
 5. Return the ID immediately to the caller so it can commit ownership/recovery state before waiting. Do not start a second upload if subsequent polling/persistence fails.
 
-On a broken connection, timeout or invalid success response after dispatch, mark the write outcome uncertain. A safe ID may be recoverable from a valid success envelope; do not regex-extract it from broken JSON or HTML. Before dispatch, local validation/cancellation means no write was sent. Neither case should be turned into an automatic mutation replay.
+On a broken connection, timeout or invalid success response after dispatch, mark the write outcome uncertain. A safe numeric `data.asset_id` may be recoverable from a parsed envelope with boolean `success`, including failed envelopes and non-2xx responses. Such upload errors remain uncertain and need status checks or cleanup; do not regex-extract IDs from broken JSON or HTML. Before dispatch, local validation/cancellation means no write was sent. Neither case should be turned into an automatic mutation replay.
 
 ## Readiness algorithm
 

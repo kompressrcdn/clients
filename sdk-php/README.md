@@ -82,3 +82,15 @@ $tenantClient = new Client(['apiKey' => $scopedSecret]);
 `IssuedKey` hides the one-time secret from JSON, debug output and serialization; retrieve it explicitly with `revealApiKey()`. Scope defaults exclude deletion. Supplying `scopes` replaces the default set. Platform administration requires a project credential and a plan supporting scoped keys; see [pricing](https://kompressr.com/pricing). A scoped client cannot gain more access by calling an administration method.
 
 [API reference](https://github.com/kompressrcdn/clients/blob/main/sdk-php/API.md) covers all methods and result shapes. [Examples](https://github.com/kompressrcdn/clients/blob/main/sdk-php/examples) include durable recovery receipts, private delivery and scoped provisioning. [Parity](https://github.com/kompressrcdn/clients/blob/main/sdk-php/PARITY.md) explains behavior and test coverage. [Contributing](https://github.com/kompressrcdn/clients/blob/main/sdk-php/CONTRIBUTING.md) describes verification.
+
+## Store original bytes
+
+```php
+$client->uploadFile('archive.zip', ['passthrough' => true]);
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

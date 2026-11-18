@@ -103,3 +103,15 @@ python scripts/verify.py
 Verification typechecks, runs local HTTP tests, builds wheel/source distributions, checks archive contents, installs the wheel in a fresh environment and repeats HTTP tests against that installed package. It uses synthetic credentials and no Kompressr account.
 
 MIT licensed. Report bugs through the repository's issue tracker and security concerns through [SECURITY.md](https://github.com/kompressrcdn/clients/blob/main/SECURITY.md).
+
+## Store original bytes
+
+```python
+files.upload_file('archive.zip', passthrough=True)
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

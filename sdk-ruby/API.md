@@ -105,7 +105,7 @@ IssuedKey exposes `id`, `key_id`, optional `upload_key`, and `reveal_api_key`. T
 
 Only GET network failures and HTTP 429/502/503/504 automatically retry, up to `max_read_retries`. Backoff starts near 250 ms and includes small jitter. Header `Retry-After` (seconds/date) or JSON `retry_after` (seconds) is a minimum delay; enormous values are saturated without an early retry. Deadline/cancellation during backoff retains the latest status and retry delay. Permission denials, malformed data and processing failures are not retryable reads.
 
-Writes are never replayed and redirects are never followed. A write becomes potentially successful when request bytes may have been sent. Losing the response or receiving malformed successful data retains that uncertainty. Upload ID recovery requires valid JSON with `success: true` and valid numeric `data.asset_id`; broken JSON and invalid Unicode do not produce IDs. Single-asset mutations retain the requested ID. Cancellation before dispatch does not claim success.
+Writes are never replayed and redirects are never followed. A write becomes potentially successful when request bytes may have been sent. Losing the response or receiving malformed successful data retains that uncertainty. Upload ID recovery requires a parsed envelope with boolean `success` and valid numeric `data.asset_id`, including failed envelopes and non-2xx responses; broken JSON and invalid Unicode do not produce IDs. A recovered upload ID sets `may_have_succeeded=true` so callers can check retained work without replaying it. Single-asset mutations retain the requested ID. Cancellation before dispatch does not claim success.
 
 During body transmission, the client also watches for an early server response. A permission, size-limit or rate-limit rejection can stop the upload before the whole file is sent, while retaining its API status, code and retry hint. Informational responses allow transmission to continue. A disconnect without a usable response still retains write uncertainty.
 
@@ -118,3 +118,15 @@ The transport uses Socket/OpenSSL nonblocking I/O and a small HTTP/1.1 parser. N
 DNS uses a process-wide maximum of eight background workers, with no queued resolver jobs. A timed-out/cancelled lookup cannot connect or send a late request. A blocked OS lookup holds its slot until it returns; later hostname requests can time out waiting for admission. Numeric IP origins bypass DNS. At most 64 attempts hold connection slots per process. Waiting for either limit remains inside the same deadline. Addresses are tried sequentially with a share of the remaining budget, preserving hostname/SNI; this can be slower than racing address families. Capacity is reset after a process fork, supporting preloaded applications.
 
 File validation/opening and the byte snapshot precede the HTTP deadline. Regular local file reads occur in bounded chunks, but OS/filesystem stalls and arbitrary Ruby thread scheduling are not forcibly interrupted. Local file access errors before dispatch remain normal Ruby filesystem exceptions. The caller supplies trusted local file paths and keeps input files/options unchanged during calls. MRI Ruby 3.2+ is the supported runtime; asynchronous scheduler integration and other Ruby engines are unverified.
+
+## Store original bytes
+
+```ruby
+files.upload_file('archive.zip', passthrough: true)
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

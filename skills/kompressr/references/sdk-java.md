@@ -8,11 +8,11 @@ Add to Maven dependencies:
 <dependency>
   <groupId>com.kompressr</groupId>
   <artifactId>kompressr-sdk</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
-Gradle equivalent: `implementation("com.kompressr:kompressr-sdk:0.1.0")`.
+Gradle equivalent: `implementation("com.kompressr:kompressr-sdk:0.2.0")`.
 
 Integration helper; the `saveAssetId` callback must commit the ID before returning:
 

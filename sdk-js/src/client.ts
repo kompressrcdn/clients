@@ -32,6 +32,8 @@ export class KompressrClient {
   }
   async uploadBlob(blob: Blob, filename: string, options: UploadOptions = {}): Promise<UploadAccepted> {
     if (!(blob instanceof Blob) || typeof filename !== 'string' || !filename.trim() || /[\r\n\0]/.test(filename)) invalid('Supply a Blob and nonempty filename without control characters.');
+    if (options.passthrough !== undefined && typeof options.passthrough !== 'boolean') invalid('passthrough must be a boolean.');
+    const path = '/api/upload' + (options.passthrough === undefined ? '' : `?passthrough=${options.passthrough}`);
     const form = new FormData();
     if (options.visibility !== undefined) {
       if (!['public', 'private'].includes(options.visibility)) invalid('visibility must be public or private.');
@@ -48,10 +50,11 @@ export class KompressrClient {
     }
     if (options.data !== undefined) form.append('data', JSON.stringify(customerData(options.data)));
     form.append('file', blob, basename(filename)); // Server requires file last.
-    return this.transport.mutate('/api/upload', { method: 'POST', body: form }, value => {
+    return this.transport.mutate(path, { method: 'POST', body: form }, value => {
       const response = record(value);
       if (response.success !== true) invalidResponse();
       const result = upload(response.data, true);
+      if (options.passthrough === true && result.passthrough !== true) invalidResponse('Passthrough mode was not confirmed; inspect the saved asset ID before retrying.');
       if (typeof response.warning === 'string') result.warning = response.warning;
       return result;
     }, options, { upload: true, recoverUploadId: true });

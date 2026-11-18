@@ -111,8 +111,21 @@ Use `errors.As(err, &failure)` with `var failure *kompressr.Error`:
 
 Client codes: `INVALID_ARGUMENT`, `INVALID_RESPONSE`, `NETWORK_ERROR`, `REQUEST_TIMEOUT`, `REQUEST_CANCELLED`, `WAIT_TIMEOUT`, `WAIT_CANCELLED`, `PROCESSING_FAILED`, `ASSET_DELETED`. Context errors also support `errors.Is`.
 
-Malformed successful writes and interrupted writes remain uncertain; valid successful upload envelopes can recover a safe `data.asset_id`, but broken JSON cannot. Single-asset mutations preserve the requested ID; bulk failures never invent one. Cancellation before dispatch has `MayHaveSucceeded=false`. That false value does not establish application-level workflow idempotency.
+Malformed successful writes and interrupted writes remain uncertain; parsed upload envelopes with boolean `success` can recover a safe `data.asset_id`, including failed envelopes and non-2xx responses, but broken JSON cannot. A recovered upload ID sets `MayHaveSucceeded=true` so callers can check retained work without replaying it. Single-asset mutations preserve the requested ID; bulk failures never invent one. Cancellation before dispatch has `MayHaveSucceeded=false`. That false value does not establish application-level workflow idempotency.
 
 Only eligible GET network/429/502/503/504 failures retry. Overall request budgets include retries and body reads. Typed responses use exact, case-sensitive JSON field names at every nesting level. Differently cased aliases cannot override canonical fields; unknown fields are ignored for forward compatibility. Customer metadata and option-map keys retain their original spelling. Responses above 2 MiB are rejected; HTML and raw network errors are not exposed. Credentials and signed URLs are removed from API error messages.
 
 Redirects are never followed. A redirect after a write is conservatively marked uncertain. Writes use fresh HTTP/1 connections and no replay body to prevent implicit transport resubmission. Reads can reuse connections and use HTTP/2. See [transport rationale](CONTRIBUTING.md).
+
+## Store original bytes
+
+```go
+flag := true
+accepted, err := files.UploadFile(ctx, "archive.zip", kompressr.UploadOptions{Passthrough: &flag})
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

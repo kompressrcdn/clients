@@ -1,6 +1,6 @@
 # Behavior parity
 
-Baseline: JS SDK 1.0.0 and the repository's shared contract. Java uses typed records, synchronous calls, `Path`/`byte[]` input and `Duration`/`CancellationToken` options. See [API.md](API.md#java-specific-boundaries) for deliberate language differences. Tests are in `src/test/java/com/kompressr/ClientTest.java`; all use local HTTP fixtures.
+Baseline: JS SDK 1.1.0 and the repository's shared contract. Java uses typed records, synchronous calls, `Path`/`byte[]` input and `Duration`/`CancellationToken` options. See [API.md](API.md#java-specific-boundaries) for deliberate language differences. Tests are in `src/test/java/com/kompressr/ClientTest.java`; all use local HTTP fixtures.
 
 | Contract | Verification |
 | --- | --- |

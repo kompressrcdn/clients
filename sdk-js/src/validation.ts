@@ -68,6 +68,7 @@ export function upload(value: unknown, accepted = false): Omit<UploadAccepted, '
   if (accepted) string(v.original_name);
   else optionalFields(v, ['original_name']);
   string(v.asset_type);
+  if (v.passthrough !== undefined && typeof v.passthrough !== 'boolean') invalidResponse();
   optionalFields(v, ['deletion_requested_at', 'external_id', 'created_at', 'input_format', 'output_format', 'private_url_expires_at']);
   safeUrls(v);
   if (visibility === 'private' && (v.cdn_url !== undefined || v.cdn_url_avif !== undefined)) invalidResponse('Private asset response contains a public URL.');

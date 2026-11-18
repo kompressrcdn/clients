@@ -46,7 +46,7 @@ public final class KompressrClient implements AutoCloseable {
         if (!Files.isRegularFile(path) || !Files.isReadable(path)) throw new IOException("Upload file is not a readable regular file.");
         var multipart = multipart(path.getFileName().toString(), options);
         multipart.addBinaryBody("file", path.toFile(), ContentType.APPLICATION_OCTET_STREAM, filename(path.getFileName().toString()));
-        return upload(multipart.build(), request);
+        return upload(multipart.build(), options, request);
     }
     public UploadAccepted uploadBytes(byte[] bytes, String filename) { return uploadBytes(bytes, filename, Options.Upload.DEFAULT, Options.Request.DEFAULT); }
     public UploadAccepted uploadBytes(byte[] bytes, String filename, Options.Upload options) { return uploadBytes(bytes, filename, options, Options.Request.DEFAULT); }
@@ -54,10 +54,16 @@ public final class KompressrClient implements AutoCloseable {
         Validation.require(bytes != null, "Supply upload bytes.");
         var multipart = multipart(filename, options);
         multipart.addBinaryBody("file", bytes.clone(), ContentType.APPLICATION_OCTET_STREAM, filename(filename));
-        return upload(multipart.build(), request);
+        return upload(multipart.build(), options, request);
     }
-    private UploadAccepted upload(HttpEntity body, Options.Request request) {
-        return transport.request("POST", "/api/upload", body, request, true, null, true, Validation::accepted);
+    private UploadAccepted upload(HttpEntity body, Options.Upload options, Options.Request request) {
+        Boolean passthrough = options == null ? null : options.passthrough();
+        String path = "/api/upload" + (passthrough == null ? "" : "?passthrough=" + passthrough);
+        return transport.request("POST", path, body, request, true, null, true, root -> {
+            var result = Validation.accepted(root);
+            Validation.shape(!Boolean.TRUE.equals(passthrough) || Boolean.TRUE.equals(result.passthrough()));
+            return result;
+        });
     }
     private static String filename(String value) {
         Validation.require(value != null && !value.isBlank() && value.chars().noneMatch(c -> c < 32 || c == 127), "Supply a nonempty filename without control characters.");

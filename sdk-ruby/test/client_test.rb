@@ -5,6 +5,39 @@ require_relative 'support'
 class ClientTest < Minitest::Test
   include Fixtures
 
+  def test_partial_upload_error_recovery
+    [403,409,500].each do |status|
+      [42,0,-1,1.5,'42',nil,9007199254740992].each do |id|
+        s=server { |_request| [status,{}, {'success'=>false,'code'=>'PASSTHROUGH_NOT_READY','data'=>{'asset_id'=>id}}] }
+        e=failure('api') { client(s).upload_bytes('', 'empty', passthrough: true) }
+        id == 42 ? assert_equal(42, e.asset_id) : assert_nil(e.asset_id)
+        assert_equal(id == 42 || status >= 500,e.may_have_succeeded)
+        assert_equal 1,s.requests.size
+      end
+    end
+  end
+
+  def test_passthrough_confirmation
+    [true, false, nil, 'true'].each do |ack|
+      response = accepted
+      response['data']['status'] = 'processed'
+      response['data']['passthrough'] = ack unless ack.nil?
+      s = server do |request|
+        assert_equal '/api/upload?passthrough=true', request[:target]
+        refute_includes request[:body], 'name="passthrough"'
+        [200, {}, response]
+      end
+      if ack == true
+        assert_equal true, client(s).upload_bytes('', 'empty', passthrough: true)['passthrough']
+      else
+        e = failure('invalid_response') { client(s).upload_bytes('', 'empty', passthrough: true) }
+        assert_equal 41, e.asset_id
+        assert e.may_have_succeeded
+      end
+      assert_equal 1, s.requests.size
+    end
+  end
+
   def test_endpoint_defaults_and_validation
     c = Kompressr::Client.new(api_key: 'example-key')
     assert_equal 'https://kompressr.com', c.api_base_url
@@ -228,13 +261,21 @@ class ClientTest < Minitest::Test
     assert_equal 1, s.requests.size
   end
 
-  def test_broken_json_and_unsuccessful_envelope_never_recover_upload_id
-    ['{"success":true,"data":{"asset_id":41},', { 'success' => false, 'data' => { 'asset_id' => 41 } }, { 'success' => true, 'data' => { 'asset_id' => '41' } }].each do |value|
+  def test_broken_json_and_invalid_ids_never_recover_upload_id
+    ['{"success":true,"data":{"asset_id":41},', { 'success' => true, 'data' => { 'asset_id' => '41' } }].each do |value|
       s = server { [200, {}, value] }
       error = failure { client(s).upload_bytes('abc', 'sample.bin') }
       assert_nil error.asset_id
       assert error.may_have_succeeded
     end
+  end
+
+  def test_unsuccessful_upload_envelope_recovers_safe_id
+    s = server { [200, {}, { 'success' => false, 'data' => { 'asset_id' => 41 } }] }
+    error = failure { client(s).upload_bytes('abc', 'sample.bin') }
+    assert_equal 41, error.asset_id
+    assert error.may_have_succeeded
+    assert_equal 1, s.requests.size
   end
 
   def test_malformed_single_and_bulk_mutations_preserve_right_context

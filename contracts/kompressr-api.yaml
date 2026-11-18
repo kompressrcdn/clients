@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Kompressr API
   version: 1.0.0
-  description: Upload, inspect, permanently delete, and mint private URLs for Kompressr assets.
+  description: Optimize supported uploads or store original bytes, inspect assets, permanently delete files, and generate private delivery URLs.
 servers:
   - url: https://kompressr.com
     description: Production management and platform API
@@ -236,6 +236,34 @@ paths:
         '400': {description: Invalid body or selection; no mutations}
         '403': {description: Missing admin authority or invalid CSRF token}
         '413': {description: Body exceeds 8192 bytes; no mutations}
+  /api/v1/projects/{project_id}/upload:
+    post:
+      summary: Upload an asset using a dashboard session
+      operationId: uploadSessionAsset
+      description: Requires an authenticated organization session, project ownership, upload capability and CSRF token. Uses the same upload modes, multipart ordering and acknowledgment as POST /api/upload. The dashboard routes files up to 80 MiB through the application host and larger files through its configured upload host. Original-file errors may contain a retained asset_id. Check status before retrying an uncertain upload.
+      security: [{sessionCookie: []}]
+      servers:
+        - url: https://kompressr.com
+        - url: https://uploads.kompressr.com
+      parameters:
+        - $ref: '#/components/parameters/ProjectID'
+        - $ref: '#/paths/~1api~1upload/post/parameters/0'
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: {type: string}
+      requestBody:
+        $ref: '#/paths/~1api~1upload/post/requestBody'
+      responses:
+        '200': {$ref: '#/paths/~1api~1upload/post/responses/200'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '413': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+        '500': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
   /api/upload:
     post:
       servers:
@@ -243,9 +271,27 @@ paths:
           description: Production upload bodies
       summary: Upload an asset
       operationId: uploadAsset
-      description: Put all multipart options before the file part; fields after the file are not read. Acceptance is not readiness; save the asset ID and check status before sharing the current processed URL. You can reupload immediately after deletion. The new asset has a new ID and can reuse the same URL. A pending deletion alone does not prevent reupload. Normal permissions, plan limits, and service availability still apply.
+      description: Put all multipart options before the file part; fields after the file are not read. Normal upload acceptance is not readiness; passthrough succeeds with processed status and passthrough true; save the asset ID and check status before sharing the current processed URL. You can reupload immediately after deletion. The new asset has a new ID and can reuse the same URL. A pending deletion alone does not prevent reupload. Normal permissions, plan limits, and service availability still apply.
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: passthrough
+          required: false
+          schema: {type: boolean, default: false}
+          description: >-
+            Set to true to store the file exactly as uploaded using zero optimization credits.
+            False or omission selects optimization. Available on Pro, Growth, Platform and Enterprise,
+            with default limits of 250, 500, 1024 and 2048 MiB per file respectively.
+            One MiB is 1048576 bytes. Your account may have custom limits.
+            Any file type is supported, including empty files. File contents are stored without inspection.
+            Scoped keys restricted by allowed_asset_types require File type 11.
+            Send this query parameter once with the literal value true or false. Repeated parameters,
+            other values and multipart passthrough fields return 400. Optimization options are ignored.
+            Original-file upload rate limits apply across your organization and default to five times
+            the non-video upload limits. Each file counts once toward storage, and downloads count toward bandwidth.
+            Confirm passthrough true, asset_type file and status processed before showing the upload as complete.
+            Retain any returned asset ID on errors and check its status before retrying.
       requestBody:
         required: true
         content:
@@ -270,24 +316,76 @@ paths:
                 kmp-quality:
                   type: string
                   enum: [480p, 720p, 1080p, 4k]
-                  description: Video uploads only.
+                  description: Optimized video uploads only. Ignored when passthrough is true.
                 file:
                   type: string
                   format: binary
               required: [file]
       responses:
         "200":
-          description: Asset accepted.
+          description: Optimized asset accepted for processing, or file stored without optimization.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UploadAccepted"
+              examples:
+                originalFile:
+                  summary: Original bytes stored and ready
+                  value:
+                    success: true
+                    data:
+                      asset_id: 124
+                      status: processed
+                      deletion_status: active
+                      visibility: public
+                      passthrough: true
+                      asset_type: file
+                      original_name: archive.zip
+                      original_size: 2048
+                      cdn_url: https://cdn.kompressr.com/660e8400-e29b-41d4-a716-446655440001/files/hash.bin
+                      data: {external_id: export_123}
+                      external_id: export_123
+                emptyPrivateFile:
+                  summary: Empty original file with private delivery
+                  value:
+                    success: true
+                    data:
+                      asset_id: 125
+                      status: processed
+                      deletion_status: active
+                      visibility: private
+                      passthrough: true
+                      asset_type: file
+                      original_name: empty.bin
+                      original_size: 0
+                      private_url: https://cdn.kompressr.com/p/660e8400-e29b-41d4-a716-446655440001/files/hash.bin?e=1794654000&s=signature
+                      private_url_expires_at: '2026-11-14T11:00:00Z'
         "400":
           $ref: "#/components/responses/Error"
         "403":
           $ref: "#/components/responses/Error"
+        "413":
+          $ref: "#/components/responses/Error"
         "429":
           $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+        "503":
+          description: The upload service is temporarily unavailable or could not confirm storage. Retain any returned asset_id and check its status before retrying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/Error/content/application~1json/schema'
+              examples:
+                uncertainStorage:
+                  value:
+                    success: false
+                    error: Upload finalization could not be confirmed. Check the asset status before retrying.
+                    code: PASSTHROUGH_NOT_READY
+                    asset_id: 124
+                    data: {asset_id: 124}
   /api/upload/{asset_id}/status:
     get:
       summary: Get upload status
@@ -329,7 +427,7 @@ paths:
                   type: string
                   enum: [webp, avif]
                   default: webp
-                  description: Variant to sign. Use avif only when the private image asset has an AVIF variant.
+                  description: Variant to sign. Omit for original File bytes. The legacy default webp selects the primary object for every type, including File. Use avif only when the private image asset has an AVIF variant. Private File signatures authorize GET and range requests. Private HEAD returns 404.
       responses:
         "200":
           description: Private URL generated.
@@ -729,6 +827,13 @@ components:
                 type: string
               code:
                 type: string
+              asset_id:
+                type: integer
+                description: Present on original-file errors after an asset ID has been allocated. Inspect status before retrying.
+              data:
+                type: object
+                properties:
+                  asset_id: {type: integer}
   schemas:
     AssetListResponse:
       type: object
@@ -961,7 +1066,7 @@ components:
           enum: [public, private, both]
         allowed_asset_types:
           type: array
-          description: Empty or omitted means all supported asset types.
+          description: Empty or omitted means all supported asset types. A restricted key must include File type 11 for original-file uploads and their status, list, private-URL and deletion operations.
           items:
             type: integer
         expires_at:
@@ -998,7 +1103,7 @@ components:
           default: both
         allowed_asset_types:
           type: array
-          description: Optional advanced policy. Empty or omitted means all supported asset types.
+          description: Optional advanced policy. Empty or omitted means all supported asset types. Include File type 11 to allow original-file uploads when restricting types.
           items:
             type: integer
         expires_at:
@@ -1041,6 +1146,9 @@ components:
           type: object
           required: [asset_id, status, visibility, deletion_status, original_name, original_size, asset_type]
           properties:
+            passthrough:
+              type: boolean
+              description: True confirms exact-byte File storage. Require true together with asset_type file and status processed before reporting original-file success. Ordinary upload responses can omit this field.
             asset_id:
               type: integer
             status:
@@ -1064,7 +1172,7 @@ components:
             private_url:
               type: string
               format: uri
-              description: Present only for private uploads when an expiring URL was requested.
+              description: Present for private uploads, with a default lifetime of 3600 seconds when private_url_expires_in is omitted.
               example: https://cdn.kompressr.com/p/660e8400-e29b-41d4-a716-446655440001/images/hash.webp?e=1777464000&s=abc123
             private_url_expires_at:
               type: string
@@ -1094,6 +1202,9 @@ components:
       type: object
       required: [id, status, visibility, deletion_status, original_size, asset_type, kompressd_size, savings_percent, can_generate_private_url]
       properties:
+        passthrough:
+          type: boolean
+          description: True for original File assets. Their ready status is processed, kompressd_size equals original_size, savings_percent is zero and optimization options are omitted. Public files support HEAD and ranges. Active documents and unknown formats download as attachments with application/octet-stream.
         id:
           type: integer
         status:

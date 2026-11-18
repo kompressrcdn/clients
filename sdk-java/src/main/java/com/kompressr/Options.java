@@ -11,7 +11,9 @@ public final class Options {
         public static final Request DEFAULT = new Request(null, null);
         public static Request timeout(Duration timeout) { return new Request(timeout, null); }
     }
-    public record Upload(String visibility, String quality, Map<String, Object> data, Integer privateUrlExpiresIn) {
+    public record Upload(String visibility, String quality, Map<String, Object> data, Integer privateUrlExpiresIn, Boolean passthrough) {
+        public Upload(String visibility, String quality, Map<String, Object> data, Integer privateUrlExpiresIn) { this(visibility, quality, data, privateUrlExpiresIn, null); }
+        public Upload withPassthrough(boolean value) { return new Upload(visibility, quality, data, privateUrlExpiresIn, value); }
         public static final Upload DEFAULT = new Upload(null, null, null, null);
         public static Upload privateFile() { return new Upload("private", null, null, null); }
         public static Upload publicFile() { return new Upload("public", null, null, null); }

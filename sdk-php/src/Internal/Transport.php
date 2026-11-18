@@ -104,10 +104,10 @@ final class Transport
                     try { $decoded = json_decode($raw, false, 128, JSON_THROW_ON_ERROR); }
                     catch (\JsonException) { if ($ok) Validate::response('API returned a non-JSON response.'); }
                 } elseif ($ok) Validate::response('API response exceeds the supported size.');
-                if ($recoverUploadId && $ok && $decoded instanceof \stdClass && ($decoded->success ?? null) === true && ($decoded->data ?? null) instanceof \stdClass && is_int($decoded->data->asset_id ?? null) && $decoded->data->asset_id > 0 && $decoded->data->asset_id <= Validate::MAX_ID) $assetId = $decoded->data->asset_id;
+                if ($recoverUploadId && $decoded instanceof \stdClass && is_bool($decoded->success ?? null) && ($decoded->data ?? null) instanceof \stdClass && is_int($decoded->data->asset_id ?? null) && $decoded->data->asset_id > 0 && $decoded->data->asset_id <= Validate::MAX_ID) $assetId = $decoded->data->asset_id;
                 if (!$ok || ($decoded instanceof \stdClass && ($decoded->success ?? null) === false)) {
                     $retryAfter = self::retryDelay($headers, $decoded);
-                    throw new KompressrException($this->safe($decoded instanceof \stdClass ? ($decoded->error ?? "Kompressr returned HTTP $status.") : "Kompressr returned HTTP $status."), 'api', $this->safe($decoded instanceof \stdClass ? ($decoded->code ?? 'API_ERROR') : 'API_ERROR'), $status, $retryAfter, $assetId, $write && ($ok || $status >= 500 || ($status >= 300 && $status < 400)));
+                    throw new KompressrException($this->safe($decoded instanceof \stdClass ? ($decoded->error ?? "Kompressr returned HTTP $status.") : "Kompressr returned HTTP $status."), 'api', $this->safe($decoded instanceof \stdClass ? ($decoded->code ?? 'API_ERROR') : 'API_ERROR'), $status, $retryAfter, $assetId, $write && ($ok || $status >= 500 || ($status >= 300 && $status < 400) || ($recoverUploadId && $assetId !== null)));
                 }
                 try { $parsed = $parse ? $parse($decoded) : $decoded; }
                 catch (KompressrException $e) { throw $e; }

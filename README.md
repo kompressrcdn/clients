@@ -73,11 +73,11 @@ An accepted upload can still be processing. Save its ID and wait for readiness b
 
 Follow the [chatbot integration guide](guides/chatbot-integration.md) to provision identities and scoped keys, bind tools to authenticated users, upload private attachments, wait for processing and refresh delivery links. Start with a runnable test, then follow the linked production reference for credential storage, conversation access and recovery.
 
-The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly. Paid plans retain their own file and usage limits. Per-user scoped keys require a Platform/AI project and a plan that includes them: currently Growth, API or Enterprise. Check the [plan comparison](https://kompressr.com/pricing#file-support).
+The 30-day free trial includes 100 image uploads total, shared across API, SDKs, MCP and dashboard. This allowance does not renew monthly. Paid plans retain their own file and usage limits. Per-user scoped keys require a Platform/AI project and a plan that includes them: currently Growth, Platform or Enterprise. Check the [plan comparison](https://kompressr.com/pricing#file-support).
 
 ## Connect an agent
 
-Configure your MCP client to run `npx -y @kompressr/mcp-server@2.0.3` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [desktop extension walkthrough](smithery/README.md).
+Configure your MCP client to run `npx -y @kompressr/mcp-server@2.1.0` with a Kompressr key. See the [MCP configuration example](mcp-server/README.md#setup), available tools and permission requirements. MCP uses the JS SDK for file operations; applications can use the SDK directly. For Claude Desktop, follow the [desktop extension walkthrough](smithery/README.md).
 
 ## Develop from source
 

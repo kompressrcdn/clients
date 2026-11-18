@@ -43,6 +43,11 @@ final class Client
     }
     private function upload(#[\SensitiveParameter] \CURLFile|\CURLStringFile $file, #[\SensitiveParameter] array $options): array
     {
+        $path = '/api/upload';
+        if (array_key_exists('passthrough', $options)) {
+            if (!is_bool($options['passthrough'])) V::invalid('passthrough must be a boolean.');
+            $path .= '?passthrough=' . ($options['passthrough'] ? 'true' : 'false');
+        }
         $fields = [];
         if (array_key_exists('visibility', $options)) $fields['visibility'] = V::choice($options['visibility'], ['public', 'private'], 'visibility');
         if (array_key_exists('quality', $options)) $fields['kmp-quality'] = V::choice($options['quality'], ['480p', '720p', '1080p', '4k'], 'quality');
@@ -53,8 +58,9 @@ final class Client
         }
         if (array_key_exists('data', $options)) $fields['data'] = V::json(V::data($options['data']));
         $fields['file'] = $file; // Multipart metadata must precede the file.
-        return $this->transport->request('/api/upload', 'POST', $fields, $options, static function (#[\SensitiveParameter] $value): array {
+        return $this->transport->request($path, 'POST', $fields, $options, static function (#[\SensitiveParameter] $value) use ($options): array {
             $v = V::success($value); $out = V::upload($v->data ?? null, true);
+            if (($options['passthrough'] ?? false) === true && ($out['passthrough'] ?? null) !== true) V::response('Passthrough mode was not confirmed; inspect the saved asset ID before retrying.');
             if (is_string($v->warning ?? null)) $out['warning'] = $v->warning;
             return $out;
         }, upload: true, recoverUploadId: true);

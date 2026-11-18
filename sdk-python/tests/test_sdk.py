@@ -61,6 +61,37 @@ def retry_context_response(handler, phase, headers_sent, release):
 
 
 class SDKTests(unittest.TestCase):
+    def test_partial_upload_error_recovery(self):
+        for status in (403, 409, 500):
+            for asset_id in (42, 0, -1, 1.5, '42', None, 2**53):
+                body = {'success': False, 'code': 'PASSTHROUGH_NOT_READY', 'error': 'Check status.', 'data': {'asset_id': asset_id}}
+                with self.subTest(status=status, asset_id=asset_id), Server(lambda r, n: (status, body, {})) as server:
+                    with self.assertRaises(KompressrError) as caught:
+                        make(server).upload_bytes(b'', 'empty', passthrough=True)
+                    self.assertEqual(caught.exception.asset_id, 42 if asset_id == 42 else None)
+                    self.assertEqual(caught.exception.may_have_succeeded, asset_id == 42 or status >= 500)
+                    self.assertEqual(caught.exception.status, status)
+                    self.assertEqual(len(server.requests), 1)
+
+    def test_passthrough_confirmation(self):
+        for ack in (True, False, None, 'true'):
+            data = {**FIXTURE['accepted'], 'status': 'processed', 'asset_type': 'file'}
+            if ack is not None:
+                data['passthrough'] = ack
+            with self.subTest(ack=ack), Server(lambda r, n: envelope(data)) as server:
+                if ack is True:
+                    result = make(server).upload_bytes(b'', 'empty', passthrough=True)
+                    self.assertIs(result['passthrough'], True)
+                else:
+                    with self.assertRaises(KompressrError) as caught:
+                        make(server).upload_bytes(b'', 'empty', passthrough=True)
+                    self.assertEqual(caught.exception.code, 'INVALID_RESPONSE')
+                    self.assertEqual(caught.exception.asset_id, 42)
+                    self.assertTrue(caught.exception.may_have_succeeded)
+                self.assertEqual(len(server.requests), 1)
+                self.assertEqual(server.requests[0]['path'], '/api/upload?passthrough=true')
+                self.assertNotIn(b'name="passthrough"', server.requests[0]['body'])
+
     def test_endpoints_and_validation(self):
         self.assertEqual(resolve_endpoints(), {'api_base_url': 'https://kompressr.com', 'upload_base_url': 'https://uploads.kompressr.com'})
         self.assertEqual(resolve_endpoints(api_base_url='https://management.example.test')['upload_base_url'], 'https://management.example.test')

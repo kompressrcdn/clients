@@ -99,6 +99,7 @@ final class Validate
         if (self::number($v->original_size ?? null, true) < 0) self::response();
         if ($accepted) self::string($v->original_name ?? null);
         self::optionalStrings($v, ['original_name', 'deletion_requested_at', 'external_id', 'created_at', 'input_format', 'output_format', 'private_url_expires_at']);
+        if (property_exists($v, 'passthrough') && !is_bool($v->passthrough)) self::response();
         self::string($v->asset_type ?? null); self::urls($v);
         if ($v->visibility === 'private' && (property_exists($v, 'cdn_url') || property_exists($v, 'cdn_url_avif'))) self::response('Private asset response contains a public URL.');
         if ($v->deletion_status !== 'active' && (property_exists($v, 'cdn_url') || property_exists($v, 'cdn_url_avif') || property_exists($v, 'private_url'))) self::response('Deleted asset response contains a delivery URL.');

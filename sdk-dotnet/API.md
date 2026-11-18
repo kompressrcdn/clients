@@ -88,4 +88,16 @@ Client codes include `INVALID_ARGUMENT`, `INVALID_RESPONSE`, `NETWORK_ERROR`, `R
 
 Only GET network errors and HTTP 429/502/503/504 retry automatically, within the original deadline. `Retry-After` is never shortened. Invalid responses, permission denials and terminal processing failures are not transient reads. Underlying HTTP reconnects cannot dispatch an extra attempt.
 
-A dispatched write interrupted by timeout/cancellation, a lost response, rejected redirect, server failure or malformed success can have succeeded. `MayHaveSucceeded` preserves that uncertainty. Validated single-asset mutation IDs survive errors; upload recovery accepts only a safe numeric `data.asset_id` inside a parsed `success: true` envelope. Broken JSON, unsafe IDs and bulk results never produce guessed recovery IDs. A false ambiguity flag is not a promise that repeating your whole application workflow is safe.
+A dispatched write interrupted by timeout/cancellation, a lost response, rejected redirect, server failure or malformed success can have succeeded. `MayHaveSucceeded` preserves that uncertainty. Validated single-asset mutation IDs survive errors; upload recovery accepts only a safe numeric `data.asset_id` inside a parsed envelope with boolean `success`, including failed envelopes and non-2xx responses. A recovered upload ID sets `MayHaveSucceeded=true` so callers can check retained work without replaying it. Broken JSON, unsafe IDs and bulk results never produce guessed recovery IDs. A false ambiguity flag is not a promise that repeating your whole application workflow is safe.
+
+## Store original bytes
+
+```csharp
+await files.UploadFileAsync("archive.zip", new() { Passthrough = true });
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

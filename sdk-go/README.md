@@ -7,7 +7,7 @@ Requires Go 1.24 or newer. The SDK uses only the standard library and works with
 ## Install
 
 ```sh
-go get github.com/kompressrcdn/clients/sdk-go@v0.1.1
+go get github.com/kompressrcdn/clients/sdk-go@v0.2.0
 ```
 
 ## Upload a file
@@ -124,3 +124,16 @@ go run ./scripts/verify.go
 This builds examples, runs `go vet` and race-enabled tests, creates a module ZIP, and installs it into an isolated consumer through a local file proxy. Tests use synthetic local HTTP servers; they do not prove live plan entitlements or production credentials. See [behavior parity](https://github.com/kompressrcdn/clients/blob/main/sdk-go/PARITY.md) and [contributing](https://github.com/kompressrcdn/clients/blob/main/sdk-go/CONTRIBUTING.md).
 
 [MIT license](https://github.com/kompressrcdn/clients/blob/main/sdk-go/LICENSE). Report bugs in the [clients repository](https://github.com/kompressrcdn/clients/issues); see the repository's [security policy](https://github.com/kompressrcdn/clients/blob/main/SECURITY.md) for private reports.
+
+## Store original bytes
+
+```go
+flag := true
+accepted, err := files.UploadFile(ctx, "archive.zip", kompressr.UploadOptions{Passthrough: &flag})
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

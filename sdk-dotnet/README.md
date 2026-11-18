@@ -7,7 +7,7 @@ Upload files, wait for processing and return delivery links from your C# backend
 Run from the directory containing your application's project file:
 
 ```sh
-dotnet add package Kompressr.Sdk --version 0.1.1
+dotnet add package Kompressr.Sdk --version 0.2.0
 ```
 
 Create a [Kompressr account](https://kompressr.com/signup), choose a plan with API upload access, and create a project. Get its API key from **Dashboard → Projects → API Keys**, then configure `KOMPRESSR_API_KEY` in your backend's secret store. Check [pricing](https://kompressr.com/pricing#file-support) for current file limits and scoped-key access.
@@ -125,3 +125,15 @@ KOMPRESSR_TEST_FRAMEWORK=net10.0 sh scripts/verify.sh
 Verification builds the library and examples, runs loopback HTTP tests, packs a NuGet archive, installs it into a clean consumer and runs the HTTP suite again. No credentials or production access are needed. The tests include a 32 MiB file upload with an allocation limit.
 
 The [API reference](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/API.md), [behavior coverage](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/PARITY.md) and [runnable examples](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/examples/Program.cs) cover the remaining details.
+
+## Store original bytes
+
+```csharp
+await files.UploadFileAsync("archive.zip", new() { Passthrough = true });
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

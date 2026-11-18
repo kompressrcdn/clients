@@ -271,7 +271,7 @@ func perform[T any](parent context.Context, t *transport, r request, parse func(
 				if valid {
 					env, _ = object(raw)
 				}
-				if r.recoverID && ok && env != nil && string(env["success"]) == "true" {
+				if r.recoverID && env != nil && (string(env["success"]) == "true" || string(env["success"]) == "false") {
 					if d, e := object(env["data"]); e == nil {
 						var id int64
 						if json.Unmarshal(d["asset_id"], &id) == nil && validID(id) {
@@ -287,7 +287,7 @@ func perform[T any](parent context.Context, t *transport, r request, parse func(
 					}
 					failure = httpFailure(status, message, code, t.key)
 					failure.AssetID = assetID
-					failure.MayHaveSucceeded = !isRead && (ok || status >= 500)
+					failure.MayHaveSucceeded = !isRead && (ok || status >= 500 || (r.recoverID && assetID > 0))
 					failure.RetryAfter = retryAfter(resp.Header.Get("Retry-After"), env)
 					// A redirect may follow an accepted write; never follow or replay it.
 					if status >= 300 && status < 400 {

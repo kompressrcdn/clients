@@ -11,7 +11,7 @@ Bundler installs the required standard-library gems when your Ruby version bundl
 Add to your application's Gemfile:
 
 ```ruby
-gem 'kompressr-sdk', '~> 0.1.0', require: 'kompressr'
+gem 'kompressr-sdk', '~> 0.2.0', require: 'kompressr'
 ```
 
 Run `bundle install`. For a standalone script, install with `gem install kompressr-sdk` and load it with `require 'kompressr'`. The gem declares its Ruby standard-gem dependencies and has no framework dependency.
@@ -144,6 +144,18 @@ bundle install
 ruby scripts/verify.rb
 ```
 
-Verification uses local HTTP/TLS fixtures, builds `pkg/kompressr-sdk-0.1.0.gem`, installs it in an isolated gem directory and reruns the regressions against the installed package. It requires no live service credentials. For release verification, run `node scripts/verify-all.mjs ruby` from the repository root instead of the native command; it runs the native verifier plus shared contract, source and archive checks and requires Node.js and Python 3 as well as Ruby.
+Verification uses local HTTP/TLS fixtures, builds `pkg/kompressr-sdk-0.2.0.gem`, installs it in an isolated gem directory and reruns the regressions against the installed package. It requires no live service credentials. For release verification, run `node scripts/verify-all.mjs ruby` from the repository root instead of the native command; it runs the native verifier plus shared contract, source and archive checks and requires Node.js and Python 3 as well as Ruby.
 
 Report security issues privately using the repository's [security policy](https://github.com/kompressrcdn/clients/blob/main/SECURITY.md). MIT licensed; see [LICENSE](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/LICENSE).
+
+## Store original bytes
+
+```ruby
+files.upload_file('archive.zip', passthrough: true)
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

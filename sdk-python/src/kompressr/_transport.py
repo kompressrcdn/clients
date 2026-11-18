@@ -209,7 +209,7 @@ class Transport:
                                 if ok:
                                     raise
                             known_retry_delay = retry_after(response.headers, parsed)
-                            if recover_upload_id and ok and isinstance(parsed, dict) and parsed.get('success') is True and isinstance(parsed.get('data'), dict):
+                            if recover_upload_id and isinstance(parsed, dict) and type(parsed.get('success')) is bool and isinstance(parsed.get('data'), dict):
                                 candidate = parsed['data'].get('asset_id')
                                 if type(candidate) in (int, float) and 0 < candidate <= MAX_SAFE and candidate == int(candidate):
                                     known_id = int(candidate)
@@ -219,7 +219,7 @@ class Transport:
                                 raise KompressrError(safe_message(failure_body.get('error', f'Kompressr returned HTTP {status}.'), self.__key),
                                     kind='api', code=safe_message(failure_body.get('code'), self.__key) if isinstance(failure_body.get('code'), str) else 'API_ERROR',
                                     status=status, retry_after_ms=known_retry_delay, asset_id=known_id,
-                                    may_have_succeeded=not can_retry and (ok or 300 <= status < 400 or status >= 500))
+                                    may_have_succeeded=not can_retry and (ok or status >= 500 or 300 <= status < 400 or (recover_upload_id and known_id is not None)))
                             try:
                                 return parse(parsed)
                             except KompressrError:

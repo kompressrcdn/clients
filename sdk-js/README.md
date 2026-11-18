@@ -137,3 +137,15 @@ The default server scopes exclude `delete`. Supplying `scopes` replaces the defa
 See [API.md](https://github.com/kompressrcdn/clients/blob/main/sdk-js/API.md) for every method, option, result shape and permission; [CHANGELOG.md](https://github.com/kompressrcdn/clients/blob/main/sdk-js/CHANGELOG.md) for changes and migration notes.
 
 From the SDK package directory, `npm run verify` builds, typechecks, tests and verifies packed consumers. Local HTTP fixtures and protocol checks demonstrate client behavior; they do not certify the deployed processing service. Release verification includes authenticated lifecycle and registry-installation checks. This package has an independent release lifecycle within the clients repository. SDK publication must precede MCP publication because MCP depends on the SDK version. See [CONTRIBUTING.md](https://github.com/kompressrcdn/clients/blob/main/sdk-js/CONTRIBUTING.md) for local development and release checks.
+
+## Store original bytes
+
+```js
+await files.uploadFile('./archive.zip', { passthrough: true });
+```
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

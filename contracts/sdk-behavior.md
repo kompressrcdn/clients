@@ -1,6 +1,6 @@
 # SDK behavior across languages
 
-The JavaScript SDK 1.0.0 and the [HTTP contract](README.md) define the compatibility baseline. Language clients use native naming, input types and cancellation mechanisms. Each package documents its supported runtimes and maps its methods to this API. A generated HTTP wrapper alone does not provide waiting, recovery or safe retry behavior.
+The JavaScript SDK 1.1.0 and the [HTTP contract](README.md) define the compatibility baseline. Language clients use native naming, input types and cancellation mechanisms. Each package documents its supported runtimes and maps its methods to this API. A generated HTTP wrapper alone does not provide waiting, recovery or safe retry behavior.
 
 ## File and platform operations
 
@@ -42,7 +42,7 @@ Errors distinguish validation, API, network, timeout, cancellation, invalid-resp
 
 Only GET network errors and HTTP 429/502/503/504 responses automatically retry. Respect `Retry-After` without shortening it, and stop when the overall request deadline expires. Processing failures, malformed responses and permission denials are not transient read failures. The configured retry count bounds the SDK retry loop. A native library's safe connection recovery for GET requests must be documented and stay within the same deadline; it must never replay a mutation or follow a redirect.
 
-Writes are never automatically replayed. A dispatched write that times out, loses its response or receives malformed successful data can have succeeded. Preserve this uncertainty even when response validation fails. An upload may recover an asset ID only from a parsed `success: true` envelope containing a valid numeric `data.asset_id`; never infer one from broken JSON. A malformed single-asset mutation retains its requested ID. A bulk failure does not arbitrarily select one ID. Cancellation before dispatch sends nothing and does not claim a possible write.
+Writes are never automatically replayed. A dispatched write that times out, loses its response or receives malformed successful data can have succeeded. Preserve this uncertainty even when response validation fails. An upload may recover an asset ID from a parsed envelope with boolean `success` and a valid numeric `data.asset_id`, including `success: false` and non-2xx responses. A recovered ID on an upload error sets `mayHaveSucceeded` because retained work may need status checks or cleanup; never replay automatically or infer an ID from broken JSON. A malformed single-asset mutation retains its requested ID. A bulk failure does not arbitrarily select one ID. Cancellation before dispatch sends nothing and does not claim a possible write.
 
 ## Credentials and permissions
 
@@ -55,3 +55,11 @@ Application authentication, conversation access, secure key storage and durable 
 Each package's parity reference maps these behaviors to its implementation and tests. Verification must exercise real local HTTP boundaries, including multipart ordering, separate origins, delayed bodies, cancellation, malformed mutations, retries, permission denials, platform operations and partial bulk results. Build and install the actual distribution in a clean consumer as part of release checks.
 
 Shared [lifecycle fixtures](fixtures/file-lifecycle.json) provide synthetic baseline records. Local permission fixtures test how a client handles denials; authenticated service checks are required to verify deployed authorization. CI and source tests do not establish registry publication or production verification.
+
+## Passthrough uploads
+
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+
+The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
+
+If the server omits or denies the acknowledgment, the SDK raises `INVALID_RESPONSE` and preserves any safely recovered asset ID with write uncertainty. Inspect the existing asset before retrying; the SDK never automatically replays the upload. Normal uploads remain compatible with responses that omit the new field.

@@ -57,14 +57,14 @@ class KompressrClient:
         self.upload_base_url = self._async.upload_base_url
         self.platform = PlatformClient(api_key=api_key, api_base_url=api_base_url, upload_base_url=upload_base_url, request_timeout=request_timeout, upload_timeout=upload_timeout, max_read_retries=max_read_retries)
 
-    def upload_file(self, path: str | os.PathLike[str], *, visibility: Visibility | None=None, quality: VideoQuality | None=None, data: CustomerData | None=None, private_url_expires_in: int | None=None, timeout: float | None=None, cancel: CancellationToken | None=None) -> UploadAccepted:
-        return _run(self._async.upload_file(path, visibility=visibility, quality=quality, data=data, private_url_expires_in=private_url_expires_in, timeout=timeout, cancel=cancel))
+    def upload_file(self, path: str | os.PathLike[str], *, passthrough: bool | None=None, visibility: Visibility | None=None, quality: VideoQuality | None=None, data: CustomerData | None=None, private_url_expires_in: int | None=None, timeout: float | None=None, cancel: CancellationToken | None=None) -> UploadAccepted:
+        return _run(self._async.upload_file(path, passthrough=passthrough, visibility=visibility, quality=quality, data=data, private_url_expires_in=private_url_expires_in, timeout=timeout, cancel=cancel))
 
-    def upload_bytes(self, content: bytes | bytearray | memoryview, filename: str, *, visibility: Visibility | None=None, quality: VideoQuality | None=None, data: CustomerData | None=None, private_url_expires_in: int | None=None, timeout: float | None=None, cancel: CancellationToken | None=None) -> UploadAccepted:
-        return _run(self._async.upload_bytes(content, filename, visibility=visibility, quality=quality, data=data, private_url_expires_in=private_url_expires_in, timeout=timeout, cancel=cancel))
+    def upload_bytes(self, content: bytes | bytearray | memoryview, filename: str, *, passthrough: bool | None=None, visibility: Visibility | None=None, quality: VideoQuality | None=None, data: CustomerData | None=None, private_url_expires_in: int | None=None, timeout: float | None=None, cancel: CancellationToken | None=None) -> UploadAccepted:
+        return _run(self._async.upload_bytes(content, filename, passthrough=passthrough, visibility=visibility, quality=quality, data=data, private_url_expires_in=private_url_expires_in, timeout=timeout, cancel=cancel))
 
-    def upload_stream(self, stream: BinaryIO, filename: str, *, visibility: Visibility | None=None, quality: VideoQuality | None=None, data: CustomerData | None=None, private_url_expires_in: int | None=None, timeout: float | None=None, cancel: CancellationToken | None=None) -> UploadAccepted:
-        return _run(self._async.upload_stream(stream, filename, visibility=visibility, quality=quality, data=data, private_url_expires_in=private_url_expires_in, timeout=timeout, cancel=cancel))
+    def upload_stream(self, stream: BinaryIO, filename: str, *, passthrough: bool | None=None, visibility: Visibility | None=None, quality: VideoQuality | None=None, data: CustomerData | None=None, private_url_expires_in: int | None=None, timeout: float | None=None, cancel: CancellationToken | None=None) -> UploadAccepted:
+        return _run(self._async.upload_stream(stream, filename, passthrough=passthrough, visibility=visibility, quality=quality, data=data, private_url_expires_in=private_url_expires_in, timeout=timeout, cancel=cancel))
 
     def get_upload_status(self, asset_id: int, *, timeout: float | None=None, cancel: CancellationToken | None=None) -> UploadAsset:
         return _run(self._async.get_upload_status(asset_id, timeout=timeout, cancel=cancel))

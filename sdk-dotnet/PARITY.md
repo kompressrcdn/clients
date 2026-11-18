@@ -1,6 +1,6 @@
 # Behavior and verification
 
-The baseline is JavaScript SDK 1.0.0 and the public HTTP contract. This package covers its complete file surface and all nine platform operations. Naming and inputs follow C#: async methods, `TimeSpan`, `CancellationToken`, regular file paths and byte memory. It does not expose JavaScript Blob or arbitrary stream inputs.
+The baseline is JavaScript SDK 1.1.0 and the public HTTP contract. This package covers its complete file surface and all nine platform operations. Naming and inputs follow C#: async methods, `TimeSpan`, `CancellationToken`, regular file paths and byte memory. It does not expose JavaScript Blob or arbitrary stream inputs.
 
 | Behavior | Implementation | Real HTTP verification |
 | --- | --- | --- |

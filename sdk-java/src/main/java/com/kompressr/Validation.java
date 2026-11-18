@@ -95,7 +95,7 @@ final class Validation {
         return new UploadAccepted(id, status, deletion, visibility,
             accepted ? str(n, "original_name") : optional(n, "original_name"), nonnegative(n, "original_size"), str(n, "asset_type"),
             optional(n, "deletion_requested_at"), cdn, avif, privateUrl, optional(n, "private_url_expires_at"), responseMetadata(n, "data"),
-            optional(n, "external_id"), stringMap(n, "options"), optional(n, "quality"), optional(n, "warning"));
+            optional(n, "external_id"), stringMap(n, "options"), optional(n, "quality"), optional(n, "warning"), n.has("passthrough") ? bool(n, "passthrough") : null);
     }
     static UploadAccepted accepted(JsonNode root) {
         JsonNode n = data(root).deepCopy();
@@ -106,7 +106,7 @@ final class Validation {
         var u = upload(n, false); var savings = n.get("savings_percent"); shape(savings != null && savings.isNumber() && Double.isFinite(savings.doubleValue()));
         return new UploadAsset(u.id(), u.status(), u.deletionStatus(), u.visibility(), u.originalName(), u.originalSize(), u.assetType(),
             u.deletionRequestedAt(), u.cdnUrl(), u.cdnUrlAvif(), u.privateUrl(), u.privateUrlExpiresAt(), u.data(), u.externalId(), u.options(), u.quality(), u.warning(),
-            nonnegative(n, "kompressd_size"), savings.doubleValue(), bool(n, "can_generate_private_url"), optional(n, "input_format"), optional(n, "output_format"), optional(n, "created_at"));
+            nonnegative(n, "kompressd_size"), savings.doubleValue(), bool(n, "can_generate_private_url"), optional(n, "input_format"), optional(n, "output_format"), optional(n, "created_at"), u.passthrough());
     }
     static PrivateUrl privateUrl(JsonNode n) {
         object(n); long ttl = num(n, "expires_in"); shape(ttl >= 60 && ttl <= 604800);

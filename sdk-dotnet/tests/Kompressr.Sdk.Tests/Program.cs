@@ -45,6 +45,29 @@ internal static class Program
     public static async Task Main()
     {
         Console.WriteLine("Runtime " + System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);
+        await Run("partial upload error recovery", async () =>
+        {
+            foreach(var status in new[]{403,409,500}) {
+                await using var server=new FixtureServer(request=>Reply.Json(new {success=false,code="PASSTHROUGH_NOT_READY",data=new {asset_id=42}},status));
+                await Error(()=>Client(server).UploadBytesAsync(Array.Empty<byte>(),"empty",new(){Passthrough=true}),"PASSTHROUGH_NOT_READY",true,42);
+                Check(server.Requests.Count==1);
+            }
+        });
+        await Run("passthrough confirmation and recovery", async () =>
+        {
+            foreach (var ack in new[] { "true", "false", "missing", "invalid" })
+            {
+                var data = Record("accepted").AsObject(); data["status"] = "processed"; data["asset_type"] = "file";
+                if (ack == "invalid") data["passthrough"] = "true";
+                else if (ack != "missing") data["passthrough"] = ack == "true";
+                await using var server = new FixtureServer(request => Reply.Json(new {success=true, data}));
+                var c = Client(server);
+                if (ack == "true") Check((await c.UploadBytesAsync(Array.Empty<byte>(), "empty", new() {Passthrough=true})).Passthrough == true);
+                else await Error(() => c.UploadBytesAsync(Array.Empty<byte>(), "empty", new() {Passthrough=true}), "INVALID_RESPONSE", true, 42);
+                Check(server.Requests.Count == 1);
+                Check(server.Requests.First().Path == "/api/upload?passthrough=true");
+            }
+        });
         await Run("public lifecycle and accepted versus ready", async () =>
         {
             int polls = 0;

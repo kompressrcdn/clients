@@ -139,10 +139,10 @@ export class Transport {
             // Preserve HTTP failure information without publishing the response body.
             body = null;
           }
-          if (validation?.recoverUploadId && ok && body && typeof body === 'object' && !Array.isArray(body)) {
+          if (validation?.recoverUploadId && body && typeof body === 'object' && !Array.isArray(body)) {
             const envelope = body as Record<string, unknown>;
             const data = envelope.data;
-            if (envelope.success === true && data && typeof data === 'object' && !Array.isArray(data)) {
+            if (typeof envelope.success === 'boolean' && data && typeof data === 'object' && !Array.isArray(data)) {
               const id = (data as Record<string, unknown>).asset_id;
               if (typeof id === 'number' && Number.isSafeInteger(id) && id > 0) knownAssetId = id;
             }
@@ -154,7 +154,7 @@ export class Transport {
             throw new KompressrError(safeMessage(failure.error ?? `Kompressr returned HTTP ${response.status}.`, this.#key), {
               kind: 'api', status: response.status,
               code: typeof failure.code === 'string' ? safeMessage(failure.code, this.#key) : 'API_ERROR',
-              retryAfterMs: wait, assetId: knownAssetId, mayHaveSucceeded: !canRetry && (ok || response.status >= 500),
+              retryAfterMs: wait, assetId: knownAssetId, mayHaveSucceeded: !canRetry && (ok || response.status >= 500 || (validation?.recoverUploadId === true && knownAssetId !== undefined)),
             });
           }
           if (validation) {

@@ -13,6 +13,7 @@ T = TypeVar('T')
 
 
 class UploadAccepted(TypedDict):
+    passthrough: NotRequired[bool]
     id: int
     status: ProcessingStatus
     deletion_status: DeletionStatus
@@ -33,6 +34,7 @@ class UploadAccepted(TypedDict):
 
 
 class UploadAsset(TypedDict):
+    passthrough: NotRequired[bool]
     id: int
     status: ProcessingStatus
     deletion_status: DeletionStatus
