@@ -1,6 +1,6 @@
 # PHP behavior and verification
 
-Baseline: JavaScript SDK 1.0.0 and the public HTTP contract. All file operations and all nine platform user/key operations are implemented. Native PHP uses synchronous methods, binary strings or regular file paths, associative result arrays, and a polling cancellation callback. It does not provide a JavaScript Blob or an arbitrary PHP stream adapter.
+Baseline: JavaScript SDK 1.1.0 and the public HTTP contract. All file operations and all nine platform user/key operations are implemented. Native PHP uses synchronous methods, binary strings or regular file paths, associative result arrays, and a polling cancellation callback. It does not provide a JavaScript Blob or an arbitrary PHP stream adapter.
 
 | Behavior | Implementation | Real HTTP regression |
 | --- | --- | --- |

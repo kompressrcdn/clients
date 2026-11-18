@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.0
+
+- Add the optional `passthrough` setting to `upload_asset` for storing original files without optimization.
+- Use SDK 1.1.0 to confirm original-file upload results and preserve recovery IDs after partial failures without replaying uploads.
+- Update desktop tool metadata and public setup examples for the new release.
+
 ## 2.0.3
 
 - Explain the shared 100-upload, 30-day image trial in onboarding and tool descriptions. Use SDK 1.0.2 documentation updates; file operations and permissions remain enforced by the API.

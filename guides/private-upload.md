@@ -12,7 +12,7 @@ These commands use a terminal with `curl`. Keep this folder outside your applica
 mkdir kompressr-quickstart
 cd kompressr-quickstart
 npm init -y
-npm install @kompressr/sdk@1.0.0
+npm install @kompressr/sdk@1.1.0
 curl -fSLo private-upload.mjs https://raw.githubusercontent.com/kompressrcdn/clients/main/examples/private-upload.mjs
 ```
 

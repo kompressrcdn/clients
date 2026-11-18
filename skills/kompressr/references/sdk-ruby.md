@@ -5,7 +5,7 @@ MRI Ruby 3.2+ with OpenSSL and a trusted CA store. Synchronous; compatible with 
 Add to the application's Gemfile, then run `bundle install`:
 
 ```ruby
-gem 'kompressr-sdk', '~> 0.1.0', require: 'kompressr'
+gem 'kompressr-sdk', '~> 0.2.0', require: 'kompressr'
 ```
 
 For a standalone script, `gem install kompressr-sdk` and `require 'kompressr'`. Native dependency installation may need compiler/OpenSSL development packages.

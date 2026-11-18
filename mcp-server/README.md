@@ -15,7 +15,7 @@ Configure an MCP client to run the package:
   "mcpServers": {
     "kompressr": {
       "command": "npx",
-      "args": ["-y", "@kompressr/mcp-server@2.0.3"],
+      "args": ["-y", "@kompressr/mcp-server@2.1.0"],
       "env": {
         "KOMPRESSR_API_KEY": "YOUR_PROJECT_OR_SCOPED_KEY",
         "KOMPRESSR_PROJECT_ID": "YOUR_PROJECT_UUID"

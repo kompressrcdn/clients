@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const Version = "0.1.1"
+const Version = "0.2.0"
 const ProductionAPIURL = "https://kompressr.com"
 const ProductionUploadURL = "https://uploads.kompressr.com"
 const MaxAssetID int64 = 9007199254740991

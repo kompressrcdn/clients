@@ -7,7 +7,7 @@ Upload files, wait for processing and return delivery links from your C# backend
 Run from the directory containing your application's project file:
 
 ```sh
-dotnet add package Kompressr.Sdk --version 0.1.1
+dotnet add package Kompressr.Sdk --version 0.2.0
 ```
 
 Create a [Kompressr account](https://kompressr.com/signup), choose a plan with API upload access, and create a project. Get its API key from **Dashboard → Projects → API Keys**, then configure `KOMPRESSR_API_KEY` in your backend's secret store. Check [pricing](https://kompressr.com/pricing#file-support) for current file limits and scoped-key access.
@@ -132,7 +132,7 @@ The [API reference](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet
 await files.UploadFileAsync("archive.zip", new() { Passthrough = true });
 ```
 
-When enabled on Pro, Growth, API or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
 
 The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
 

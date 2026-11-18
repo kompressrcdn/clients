@@ -13,7 +13,7 @@ Requires Node.js 22+. A typical host configuration supporting `mcpServers` is:
   "mcpServers": {
     "kompressr": {
       "command": "npx",
-      "args": ["-y", "@kompressr/mcp-server@2.0.3"],
+      "args": ["-y", "@kompressr/mcp-server@2.1.0"],
       "env": {
         "KOMPRESSR_API_KEY": "YOUR_SCOPED_API_KEY",
         "KOMPRESSR_PROJECT_ID": "YOUR_PROJECT_UUID"

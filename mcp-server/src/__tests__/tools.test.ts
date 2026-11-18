@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
@@ -25,7 +26,16 @@ describe('MCP protocol schemas, annotations and workflow', () => {
     expect(tools.map(x => x.name).sort()).toEqual(['register', 'verify_email', 'upload_asset', 'get_asset_status', 'list_assets', 'generate_private_url', 'wait_for_asset', 'get_asset_deletion_status', 'delete_asset', 'bulk_delete_assets'].sort());
     expect(tools.find(x => x.name === 'delete_asset')?.annotations).toMatchObject({ destructiveHint: true, readOnlyHint: false, idempotentHint: true });
     expect(tools.find(x => x.name === 'get_asset_status')?.annotations?.readOnlyHint).toBe(true);
-    expect(client.getServerVersion()?.version).toBe('2.0.3');
+    expect(client.getServerVersion()?.version).toBe('2.1.0');
+  });
+  it('keeps desktop and directory metadata aligned with the actual tool schemas', async () => {
+    const { client } = await connected();
+    const { tools } = await client.listTools();
+    const payload = JSON.parse(readFileSync(new URL('../../../smithery/release-payload.json', import.meta.url), 'utf8'));
+    const manifest = JSON.parse(readFileSync(new URL('../../../smithery/manifest.json', import.meta.url), 'utf8'));
+    expect(payload.serverCard.serverInfo).toEqual(client.getServerVersion());
+    expect(payload.serverCard.tools).toEqual(tools);
+    expect(manifest.tools).toEqual(tools.map(({ name, description }) => ({ name, description })));
   });
   it('returns structured acceptance without marking a pending URL ready, then current processed status', async () => {
     const { adapter, client } = await connected();

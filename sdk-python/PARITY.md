@@ -1,6 +1,6 @@
 # Behavior and verification map
 
-Baseline: JS SDK 1.0.0 and the shared API contract. `tests/test_sdk.py` uses real loopback HTTP servers and synthetic credentials. The lifecycle fixture is copied from `contracts/fixtures/file-lifecycle.json` so source distributions can test independently.
+Baseline: JS SDK 1.1.0 and the shared API contract. `tests/test_sdk.py` uses real loopback HTTP servers and synthetic credentials. The lifecycle fixture is copied from `contracts/fixtures/file-lifecycle.json` so source distributions can test independently.
 
 | JS surface / guarantee | Python surface | Regression evidence in `tests/test_sdk.py` |
 | --- | --- | --- |

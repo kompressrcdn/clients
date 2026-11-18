@@ -1,6 +1,6 @@
 # Chatbot production integration reference
 
-Start with the [runnable private-upload walkthrough](chatbot-integration.md). This reference covers the application work needed before serving real users. Use a Platform/AI project on Growth, API or Enterprise. Keep development and production in separate projects.
+Start with the [runnable private-upload walkthrough](chatbot-integration.md). This reference covers the application work needed before serving real users. Use a Platform/AI project on Growth, Platform or Enterprise. Keep development and production in separate projects.
 
 ## 1. Provision an identity and key on first use
 

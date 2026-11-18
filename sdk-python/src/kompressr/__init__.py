@@ -10,7 +10,7 @@ from .types import (
     UploadScope, UsagePeriod, VideoQuality, Visibility,
 )
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 __all__ = [
     'AsyncKompressrClient', 'AsyncPlatformClient', 'KompressrClient', 'PlatformClient',
     'ErrorKind', 'KompressrError', 'KompressrCancelledError', 'CancellationToken',

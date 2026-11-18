@@ -1,6 +1,6 @@
 # SDK behavior across languages
 
-The JavaScript SDK 1.0.0 and the [HTTP contract](README.md) define the compatibility baseline. Language clients use native naming, input types and cancellation mechanisms. Each package documents its supported runtimes and maps its methods to this API. A generated HTTP wrapper alone does not provide waiting, recovery or safe retry behavior.
+The JavaScript SDK 1.1.0 and the [HTTP contract](README.md) define the compatibility baseline. Language clients use native naming, input types and cancellation mechanisms. Each package documents its supported runtimes and maps its methods to this API. A generated HTTP wrapper alone does not provide waiting, recovery or safe retry behavior.
 
 ## File and platform operations
 
@@ -58,7 +58,7 @@ Shared [lifecycle fixtures](fixtures/file-lifecycle.json) provide synthetic base
 
 ## Passthrough uploads
 
-When enabled on Pro, Growth, API or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
+When enabled on Pro, Growth, Platform or Enterprise, passthrough stores arbitrary original bytes, including empty files, without optimization credits. Default file caps are 250 MiB, 500 MiB, 1 GiB and 2 GiB respectively; account overrides apply. Storage counts one retained copy and bandwidth remains metered. The separate organization rate pool defaults to five times normal non-video limits. Scoped type restrictions must permit File (11).
 
 The SDK puts the optional boolean in the URL query, before dispatch; it is never a multipart field. Omitted or false preserves normal uploads. A successful passthrough response is immediately `processed` and includes `passthrough: true`. Quality, format and resizing options do not optimize a passthrough file. The default private-link variant selects its original bytes; AVIF is unavailable.
 
