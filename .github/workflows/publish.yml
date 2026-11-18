@@ -7,6 +7,10 @@ on:
     types: [completed]
   workflow_dispatch:
     inputs:
+      packages:
+        description: 'Optional comma-separated packages for explicit recovery (for example python,sdk-js)'
+        type: string
+        required: false
       sha:
         description: 'Optional full main commit SHA to resume a retained release'
         type: string
@@ -232,7 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
-      artifact-id: ${{ steps.publish.outputs.artifact-id }}
+      artifact-id: ${{ steps.consumer-artifact.outputs.artifact-id }}
     environment: release
     permissions:
       contents: write
@@ -253,6 +257,24 @@ jobs:
           package: python
           sha: ${{ needs.plan.outputs.sha }}
           artifact-id: ${{ needs.python-build.outputs.artifact-id }}
+      # Keep this action at workflow level: nested action context can select
+      # the caller's repository as the PyPA container image.
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086
+        if: steps.publish.outputs.upload == 'true'
+        with:
+          packages-dir: pypi-dist/
+          skip-existing: true
+      - name: Prepare authenticated Python consumer handoff
+        run: python automation/scripts/release/release.py handoff "$PACKAGE" "$RELEASE_DIR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        id: consumer-artifact
+        with:
+          name: retained-python-${{ github.run_attempt }}
+          path: consumer-artifacts/*
+          if-no-files-found: error
+          retention-days: 7
 
   python-consumer:
     needs: [plan, python-publish]

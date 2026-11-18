@@ -26,6 +26,8 @@ import uuid
 import xml.etree.ElementTree as ET
 import zipfile
 
+import changes
+
 CONTROL_ROOT = Path(__file__).resolve().parents[2]
 ROOT = Path(os.environ.get('RELEASE_SOURCE', CONTROL_ROOT)).resolve()
 SIGNER = 'kompressrcdn/clients/.github/workflows/publish.yml'
@@ -206,6 +208,54 @@ def repository_controls():
     raise RuntimeError('An active all-tags ruleset must prohibit tag updates and deletions')
 
 
+def verified_selection(checked, sha):
+    run_id, attempt = checked['id'], checked['run_attempt']
+    require(type(run_id) is int and run_id > 0 and type(attempt) is int and attempt > 0,
+            'Invalid verification run identity')
+    matches = []
+    page = 1
+    while True:
+        artifacts = github(f'actions/runs/{run_id}/artifacts?per_page=100&page={page}')['artifacts']
+        for artifact in artifacts:
+            match = re.fullmatch(r'client-selection-([1-9][0-9]*)', artifact['name'])
+            if match and int(match[1]) <= attempt:
+                matches.append((int(match[1]), artifact))
+        if len(artifacts) < 100:
+            break
+        page += 1
+    # Rerun-failed-jobs reuses a successful selector from an earlier attempt.
+    # Its event and source SHA are unchanged; prefer a new selection if it ran.
+    latest = max((number for number, _ in matches), default=0)
+    matches = [artifact for number, artifact in matches if number == latest]
+    require(len(matches) == 1 and not matches[0]['expired'],
+            'Missing current verification selection; rerun verification or explicitly select recovery packages')
+    artifact_id = matches[0]['id']
+    require(type(artifact_id) is int and artifact_id > 0, 'Invalid selection artifact ID')
+    raw = subprocess.check_output(['gh', 'api', f'repos/{REPO}/actions/artifacts/{artifact_id}/zip'], cwd=CONTROL_ROOT)
+    require(len(raw) <= 1024 * 1024, 'Selection archive exceeds its limit')
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        require(archive.namelist() == ['selection.json'] and archive.getinfo('selection.json').file_size <= 65536,
+                'Unexpected selection artifact contents')
+        value = json.loads(archive.read('selection.json'))
+    require(isinstance(value, dict) and value.get('schema') == 1 and value.get('head') == sha,
+            'Selection belongs to another verification commit')
+    require(isinstance(value.get('base'), str) and SHA.fullmatch(value['base']), 'Invalid selection base')
+    expected = changes.selection(value['base'], sha, root=ROOT)
+    require(json.dumps(value, sort_keys=True) == json.dumps(expected, sort_keys=True),
+            'Verification selection differs from the source changes')
+    return set(value['publish'])
+
+
+def selected_packages(checked, sha, event):
+    explicit = event.get('inputs', {}).get('packages', '') if os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch' else ''
+    require(isinstance(explicit, str), 'Expected a comma-separated recovery package list')
+    if explicit.strip():
+        selected = {key.strip() for key in explicit.split(',')}
+        require(selected <= set(KEYS), 'Unknown recovery package')
+        return selected
+    return verified_selection(checked, sha)
+
+
 def plan():
     require(os.environ['GITHUB_REPOSITORY'] == REPO and os.environ['GITHUB_REF'] == 'refs/heads/main', 'Only upstream main may release')
     repository_controls()
@@ -227,6 +277,10 @@ def plan():
     configured = os.environ.get('RELEASE_PACKAGES', '')
     selected = {p.strip() for p in configured.split(',') if p.strip()}
     require(selected <= set(KEYS), 'Unknown RELEASE_PACKAGES entry')
+    requested = selected_packages(checked, sha, event)
+    explicit = os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch' and event.get('inputs', {}).get('packages', '').strip()
+    require(not explicit or requested <= selected, 'Recovery includes a package disabled by RELEASE_PACKAGES')
+    selected &= requested
     current = run('git', 'rev-parse', 'origin/main', capture=True).strip() == sha == os.environ['GITHUB_SHA']
     pending = []
     builds = []

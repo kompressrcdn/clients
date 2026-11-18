@@ -344,7 +344,7 @@ class ReleaseTests(unittest.TestCase):
         event = self.directory / 'event.json'
         r.write_json(event, {'workflow_run': {'id': 42}})
         rels = {'sdk-js': None, 'mcp-server': {'assets': [{'name': 'release.json'}]}, 'python': None}
-        with patch.dict(os.environ, {'GITHUB_EVENT_PATH': str(event), 'GITHUB_REPOSITORY': r.REPO, 'GITHUB_REF': 'refs/heads/main', 'GITHUB_EVENT_NAME': 'workflow_run', 'GITHUB_SHA': self.sha, 'RELEASE_PACKAGES': 'sdk-js,mcp-server,python'}), patch.object(r, 'repository_controls'), patch.object(r, 'github', return_value=self.valid_run()), patch.object(r, 'run', return_value=self.sha), patch.object(r, 'versions', return_value={'sdk-js': '1.0.2', 'mcp-server': '2.0.3', 'python': '0.2.0'}), patch.object(r, 'release', side_effect=lambda key, version: rels[key]), patch.object(r, 'registry', side_effect=lambda key, version: {} if key == 'sdk-js' else None), patch.object(r, 'download', return_value={'sha': self.sha}), patch.object(r, 'complete', return_value=False), patch.object(r, 'output') as output:
+        with patch.dict(os.environ, {'GITHUB_EVENT_PATH': str(event), 'GITHUB_REPOSITORY': r.REPO, 'GITHUB_REF': 'refs/heads/main', 'GITHUB_EVENT_NAME': 'workflow_run', 'GITHUB_SHA': self.sha, 'RELEASE_PACKAGES': 'sdk-js,mcp-server,python'}), patch.object(r, 'repository_controls'), patch.object(r, 'selected_packages', return_value={'sdk-js', 'mcp-server', 'python'}), patch.object(r, 'github', return_value=self.valid_run()), patch.object(r, 'run', return_value=self.sha), patch.object(r, 'versions', return_value={'sdk-js': '1.0.2', 'mcp-server': '2.0.3', 'python': '0.2.0'}), patch.object(r, 'release', side_effect=lambda key, version: rels[key]), patch.object(r, 'registry', side_effect=lambda key, version: {} if key == 'sdk-js' else None), patch.object(r, 'download', return_value={'sha': self.sha}), patch.object(r, 'complete', return_value=False), patch.object(r, 'output') as output:
             r.plan()
             result = dict(call.args for call in output.call_args_list)
             self.assertEqual(result['sdk'], 'false')
@@ -437,15 +437,15 @@ class ReleaseTests(unittest.TestCase):
             registry.assert_not_called()
 
     def test_required_gate_rejects_failed_skipped_and_cancelled_jobs(self):
-        import subprocess
-        import sys
-        import textwrap
-        workflow = (r.CONTROL_ROOT / '.github/workflows/verify.yml').read_text()
-        script = textwrap.dedent(workflow.split("python3 - <<'PYTHON'\n", 1)[1].split('          PYTHON\n', 1)[0])
+        import gate
         for result in ('success', 'failure', 'skipped', 'cancelled'):
-            env = {**r.consumer_environment(), 'CHECK_RESULTS': json.dumps({'verify': {'result': 'success'}, 'python': {'result': result}})}
-            completed = subprocess.run([sys.executable, '-c', script], env=env, capture_output=True, text=True)
-            self.assertEqual(completed.returncode == 0, result == 'success')
+            results = {name: {'result': 'success' if name in ('changes', 'release-tools', 'python') else 'skipped'} for name in gate.JOBS}
+            results['python']['result'] = result
+            if result == 'success':
+                gate.check(results, ['python'])
+            else:
+                with self.assertRaises(ValueError):
+                    gate.check(results, ['python'])
 
     def test_draft_discovery_paginates_and_reads_the_selected_id(self):
         first = [{'id': i + 1, 'tag_name': f'sdk-python/v9.0.{i}', 'draft': False} for i in range(100)]
@@ -480,7 +480,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_old_sha_recovers_retained_packages_without_building_others(self):
         event = self.directory / 'event.json'
-        r.write_json(event, {'inputs': {'sha': self.sha}})
+        r.write_json(event, {'inputs': {'sha': self.sha, 'packages': 'python,java'}})
         run = {**self.valid_run(), 'id': 123}
         rels = {'python': {'draft': True, 'assets': [{'name': 'release.json'}]}, 'java': None}
         env = {'GITHUB_EVENT_PATH': str(event), 'GITHUB_REPOSITORY': r.REPO,
