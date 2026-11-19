@@ -30,7 +30,7 @@ curl --fail-with-body --silent --show-error --max-time 600 \
 
 Stop if curl fails. A dispatched upload can still have succeeded; inspect any valid returned asset ID or reconcile before sending it again. Do not add `--retry` to this write.
 
-**Send every option before `file`.** Options after the file part are not read. Let the HTTP library generate the multipart boundary; do not manually set a bare `Content-Type: multipart/form-data` header.
+**Send every multipart option before `file`.** Options after the file part are not read. The original-upload switch `passthrough` belongs in the URL query, never in multipart. Let the HTTP library generate the multipart boundary; do not manually set a bare `Content-Type: multipart/form-data` header.
 
 | Multipart field | Meaning |
 | --- | --- |
@@ -51,6 +51,32 @@ KOMPRESSR_ASSET_ID="$(jq -er '
 ```
 
 If jq fails, stop; do not proceed with an empty ID. Save the ID before waiting. An acceptance URL does not establish readiness. `external_id` is correlation metadata, not a deduplication or authorization guarantee.
+
+### Upload without optimization
+
+For an enabled eligible account, use the same authentication and private receipt-directory setup above, choose a file named `archive.zip`, and use this upload command **instead of** the ordinary upload command:
+
+```sh
+curl --fail-with-body --silent --show-error --max-time 600 \
+  'https://uploads.kompressr.com/api/upload?passthrough=true' \
+  -H "Authorization: Bearer $KOMPRESSR_API_KEY" \
+  --form 'visibility=public' \
+  --form 'file=@archive.zip' \
+  --output "$KOMPRESSR_RECEIPT_DIR/accepted.json"
+```
+
+Keep the response/error handling and ID extraction from step 1. Save the ID before checking the acknowledgment, so it is available for recovery. Then confirm the public original result without printing its URL:
+
+```sh
+jq -e '
+  .success == true and .data.passthrough == true and
+  .data.status == "processed" and .data.asset_type == "file" and
+  .data.deletion_status == "active" and .data.visibility == "public" and
+  (.data.cdn_url | type == "string" and length > 0)
+' "$KOMPRESSR_RECEIPT_DIR/accepted.json" >/dev/null
+```
+
+If confirmation fails, inspect the saved ID; do not automatically repeat the upload or remove the flag. A confirmed public original is ready without an optimization wait. For a private original, use `visibility=private`, confirm private visibility and the original-mode/readiness fields, then check status and sign as below after authorizing the viewer. Omit the signing variant. See [upload modes](uploads.md) for file limits, File (11) permission, accounting and uncertain outcomes. Omitted or `passthrough=false` retains ordinary optimization.
 
 ## 2. Check readiness on the same ID
 
@@ -132,8 +158,11 @@ Example private-only key policy: `{"name":"Chat files","scopes":["upload","statu
 | 8 | HTML |
 | 9 | JSON |
 | 10 | XML |
+| 11 | File: original uploads without optimization |
 
 For example, add `"allowed_asset_types":[1,2]` to the key policy to allow images and PDFs. SVG is a separate family. This policy narrows the key; it does not grant formats excluded by the subscription. It selects families, not individual filename extensions. If filtering produces no allowed families, do not issue the key: sending `[]` would allow all supported types.
+
+A restricted original-upload key needs `11` even for PNG/video input. To intentionally allow both optimized images and original files, include both `1` and `11`; do not broaden an existing application's policy without authorization.
 
 ## Errors and complete schemas
 

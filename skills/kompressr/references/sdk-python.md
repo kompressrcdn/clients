@@ -32,6 +32,16 @@ python sdk-python/examples/upload.py --resume --receipt receipt.json
 
 It defaults to private delivery; use `--public` only for public files. Its output can include a signed URL intended for your local test.
 
+## Upload without optimization
+
+For original-byte storage, replace the upload call in the helper above with:
+
+```python
+accepted = await files.upload_file(path, visibility='public', passthrough=True)
+```
+
+For the synchronous client, use the same keywords without `await`. The option also applies to `upload_bytes` and supported `upload_stream` inputs. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+
 ## Methods and shapes
 
 Results use dictionaries, including acceptance `['id']`, status `['cdn_url']` and signing `['private_url']`. Files use `upload_file`; bytes use `upload_bytes`. `upload_stream(stream, filename)` accepts an unmodified `BytesIO`, or a standard `FileIO`/`BufferedReader` backed by a regular binary file. It rewinds to zero and leaves the stream open; custom readers, pipes and sockets are unsupported. For private files, set `visibility='private'`, persist the ID, wait and call `generate_private_url` after application authorization.

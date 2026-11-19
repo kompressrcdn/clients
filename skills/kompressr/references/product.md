@@ -7,7 +7,8 @@ Kompressr combines file optimization, storage for uploaded files, and CDN delive
 | Path | Where originals live | What the integration does |
 | --- | --- | --- |
 | Website URL prepend | Your existing public origin | Replace selected asset URLs with Kompressr-prefixed URLs; Kompressr fetches the source and serves optimized copies |
-| Dashboard, SDK or HTTP upload | Uploaded originals are stored by Kompressr | Send a file, save its asset ID, wait for processing and use public delivery or private signed links |
+| Optimized upload through dashboard, SDK, HTTP or MCP | Uploaded originals are stored by Kompressr | Save the asset ID, wait for processing when needed, then use public delivery or private signed links |
+| Upload without optimization through dashboard, SDK, HTTP or MCP | Kompressr stores the original bytes | Confirm original mode and ready status, save the asset ID and use public delivery or private signed links |
 
 You can use both. A shop might prepend its existing product images and upload customer attachments privately. An AI app might upload generated reports and store each asset ID against a conversation. An agency can separate client sites into projects.
 
@@ -17,7 +18,7 @@ An SDK is a language library in your backend. The HTTP API provides the underlyi
 
 For existing website files, Kompressr receives a prefixed request, checks the project/source domain and looks for a deliverable. On a first request it can return the origin file while optimization runs. Later requests can use the optimized version and edge cache. The original origin must remain reachable.
 
-For uploads, Kompressr accepts the bytes and processes them asynchronously. The accepted response is a recovery receipt, not a guarantee that delivery is ready. Once processing succeeds, the current status provides a public URL or permission to generate a private signed URL. The SDKs implement bounded readiness polling and preserve IDs when a wait stops.
+For optimized uploads, Kompressr accepts the bytes and processes them asynchronously. The accepted response is a recovery receipt, not a guarantee that delivery is ready. Once processing succeeds, the current status provides a public URL or permission to generate a private signed URL. The SDKs implement bounded readiness polling and preserve IDs when a wait stops. [Original uploads](uploads.md) instead store exact bytes and confirm processed status during the successful upload; they need no optimization wait.
 
 CDN caching reduces repeated work and places delivery closer to visitors. Actual first-request latency, warm-cache latency and compression depend on the file, origin, region, browser and plan. Do not describe every request as a cache hit or every upload as immediately optimized.
 
@@ -31,9 +32,9 @@ CDN caching reduces repeated work and places delivery closer to visitors. Actual
 | Fonts | Optimize/convert supported web-font inputs to WOFF2 | Test the actual stylesheet, font URLs and browser rendering |
 | CSS, JavaScript, HTML, JSON, XML, SVG | Supported minification/optimization | Changed bytes can invalidate integrity hashes; test application behavior and linked resources |
 
-The current [plan comparison](https://kompressr.com/pricing#file-support) is authoritative for availability and limits. The free trial includes 100 shared API/dashboard image uploads over 30 days. Starter supports ongoing API uploads for images; it does not grant every file family. Pro adds additional file families. Responsive images are not included on every higher-priced plan: check the exact row rather than inferring from price. Growth is currently the lowest plan with scoped upload keys; API and Enterprise also include them.
+The current [plan comparison](https://kompressr.com/pricing#file-support) is authoritative for availability and limits. The free trial includes 100 shared API/dashboard image uploads over 30 days. Starter supports ongoing API uploads for images; it does not grant every file family. Pro adds additional file families. Responsive images are not included on every higher-priced plan: check the exact row rather than inferring from price. Growth is currently the lowest plan with scoped upload keys; Platform and Enterprise also include them.
 
-Supported formats are not a promise to accept arbitrary binary files. Do not use Kompressr as an undocumented general-purpose archive store. File extension, actual content, project restrictions and plan limits can all affect acceptance.
+The table describes optimization support. Original uploads can store arbitrary file bytes, including archives, on an enabled eligible plan. They do not convert those files or make them browser-compatible. File size, project/key restrictions and plan limits still apply; choose the mode explicitly using [upload guidance](uploads.md).
 
 ## Practical advantages and tradeoffs
 
@@ -60,7 +61,7 @@ These are capability-based reasons to consider Kompressr. Do not claim that it i
 
 ## Understand usage and cost
 
-For uploads, storage includes originals and generated versions. For URL-prepend files, the original remains on your host and Kompressr stores generated copies. Bandwidth measures delivered data. New-file processing allowances, rate limits and file-specific limits apply even where the product describes unlimited optimizations with fair use. Generated variants are grouped with their file for the fair-use accounting described by the service.
+For optimized uploads, storage includes originals and generated versions. Original uploads retain one copy without optimization credits; storage and bandwidth remain metered. For URL-prepend files, the original remains on your host and Kompressr stores generated copies. Bandwidth measures delivered data. Processing allowances apply to optimization; both upload modes retain their applicable rate, file-size and upload limits. Generated variants are grouped with their file for the fair-use accounting described by the service.
 
 Read [pricing](https://kompressr.com/pricing) and [fair use](https://kompressr.com/fair-use) for current quotas, overages and billing rules. Do not hard-code prices or assume an API key bypasses exhausted allowances. Storage released after deletion is not a cash refund or a reversal of historical bandwidth/processing.
 

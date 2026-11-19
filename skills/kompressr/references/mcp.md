@@ -34,7 +34,7 @@ Registry identity: `com.kompressr/kompressr`. npm package identity: `@kompressr/
 | Tools | Purpose |
 | --- | --- |
 | `register`, `verify_email` | Account onboarding; verified accounts can upload images within the active free trial or paid-plan limits |
-| `upload_asset` | Upload a supported file; preserve its returned asset ID |
+| `upload_asset` | Optimize a supported file, or request original-byte storage; preserve its returned asset ID |
 | `get_asset_status`, `wait_for_asset` | Check/wait for processing before delivery |
 | `list_assets` | List uploads accessible to the configured identity/project |
 | `generate_private_url` | Explicitly sign a private ready asset |
@@ -42,6 +42,20 @@ Registry identity: `com.kompressr/kompressr`. npm package identity: `@kompressr/
 | `get_asset_deletion_status` | Inspect cleanup progress |
 
 Use the host's discovered tool schema for exact arguments; do not invent parameters from SDK method names. The MCP `list_assets` tool follows its own documented upload-list behavior; do not assume it is identical to the raw managed-asset endpoint with a similar name.
+
+## Upload without optimization
+
+With MCP 2.1.0 or later, pass these arguments to `upload_asset` for a local file that the host is authorized to read:
+
+```json
+{"file_path":"./archive.zip","visibility":"private","passthrough":true}
+```
+
+For an authorized remote source, replace `file_path` with `file_url`, for example `https://example.com/archive.zip`; provide exactly one source. MCP downloads that URL on its own host before uploading bytes. Its existing download-size, network and cancellation restrictions remain even if the account accepts a larger original upload. The HTTP Upload API itself does not import URLs.
+
+The SDK verifies the true passthrough acknowledgment. Confirm the tool succeeded, preserve `asset_id` and inspect `passthrough`, `status` and `ready`. A successful original is processed/ready immediately; use `get_asset_status` for subsequent state checks rather than reuploading. For private delivery, authorize the viewer and call `generate_private_url` with the default variant. For ordinary uploads that are not ready, keep using `wait_for_asset`.
+
+See [upload modes](uploads.md) for plan/key requirements and failure handling. An error, missing acknowledgment or lost response must not trigger an automatic repeat, a switch to optimized mode or stronger credentials.
 
 ## Isolation and verification
 

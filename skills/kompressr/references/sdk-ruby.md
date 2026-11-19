@@ -26,6 +26,16 @@ end
 
 Create `Kompressr::Client.new(api_key: ENV.fetch('KOMPRESSR_API_KEY'))` in backend code. The [private-upload example](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/examples/private_upload.rb) saves a local recovery ID and keeps the private link out of terminal output. The [Rails service example](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/examples/rails_service.rb) demonstrates application persistence and later-job readiness/signing.
 
+## Upload without optimization
+
+For original-byte storage, replace the upload call in the helper above with:
+
+```ruby
+accepted = files.upload_file(path, visibility: 'public', passthrough: true)
+```
+
+The option also applies to `upload_bytes`. Read the acknowledgment as `accepted.fetch('passthrough')`; response keys remain strings. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+
 ## Methods and shapes
 
 Results are hashes with **string keys**, not symbols. `upload_file` streams regular files; `upload_bytes(bytes, filename)` takes a binary String. Private flow: `visibility: 'private'`, persist ID, `wait_until_ready`, authorize, `generate_private_url(id, expires_in: 3600)`, then read `'private_url'`.

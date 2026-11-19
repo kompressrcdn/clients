@@ -39,6 +39,8 @@ The 30-day free trial includes 100 image uploads shared across API, SDKs, MCP an
 
 After email verification, an active free trial permits API image uploads within the shared 100-upload allowance. Possessing a key does not override plan, project or scope checks.
 
+For uploads without optimization, follow [original-upload availability and permissions](uploads.md). An enabled Pro, Growth, Platform or Enterprise plan is required, with its own file-size limit. Free Trial and Starter do not include this mode. A scoped key restricted to images alone does not permit original uploads; the restricted list must allow File (11).
+
 ## What your application stores
 
 - The numeric accepted asset ID against its authenticated owner and app record before waiting for processing.

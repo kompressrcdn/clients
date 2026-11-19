@@ -11,7 +11,9 @@ Start with the failing stage: setup, upload acceptance, processing, delivery, au
 | 401 | Full current key, correct environment and intended API origin; do not print the key |
 | 403 | Plan access, active project/identity, scopes, visibility/type policy and endpoint authority |
 | Cross-user asset returns 404 | Treat as possible intended isolation; inspect app owner mapping, never fall back to master automatically |
-| Upload URL exists but returns 404 | Check processing on the saved ID; acceptance can precede delivery |
+| Upload URL exists but returns 404 | Check the saved ID's mode, status, visibility and current URL. Optimized acceptance can precede delivery; a confirmed processed original should be ready, so investigate delivery instead of assuming optimization is still running |
+| Original upload denied for an image | Confirm account eligibility and File (11) permission; an image-only key does not permit original uploads |
+| Original mode missing from the response | Preserve safe ID and uncertainty; check installed SDK/server behavior and query flag. Never silently retry as an optimized upload |
 | Pending beyond the caller's wait | Keep ID, schedule another check; investigate plan/processing status; do not reupload merely because waiting timed out |
 | Failed/unprocessable | Inspect supported format/content, plan limits and safe service error; do not relabel as ready |
 | Processed response lacks public URL/private readiness | Invalid response; preserve ID and investigate rather than fabricate a URL |
@@ -42,6 +44,15 @@ Use a test project and files the user has authorized. Local fixtures can test ad
 8. For multi-user apps, run the two-identity isolation checks in [security](security.md), including denied actions and app conversation membership.
 
 For custom HTTP, additionally test multipart order, response envelopes, bounded bodies, retry deadlines, cancellation and ambiguous writes from the [adapter contract cases](custom-integration.md).
+
+When implementing [original uploads](uploads.md), also exercise:
+
+- A public original, including an empty file where relevant: one upload, true acknowledgment, processed/active result and exact downloaded bytes.
+- A private original: no public URL, authorized signing with default variant, renewed access using the saved ID.
+- Omitted and false passthrough options: existing optimized behavior, including pending-to-ready processing.
+- An eligible scoped key restricted to File (11), an image-only key and a private-only key: intended permissions apply without escalation.
+- Missing/false acknowledgment or a lost response after dispatch, using fixtures: retain any safe ID and uncertainty, with no second upload or mode fallback.
+- An account/file-size rejection: surface it without changing the account, file, key or upload mode to force success.
 
 ## Acceptance checks for an existing website
 
