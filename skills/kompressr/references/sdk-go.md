@@ -6,7 +6,7 @@ Go 1.24+. Standard-library runtime dependencies; compatible with ordinary Go HTT
 go get github.com/kompressrcdn/clients/sdk-go@v0.2.0
 ```
 
-Integration helper; the caller constructs a client with `kompressr.New(kompressr.Config{APIKey: ...})` and supplies durable persistence:
+Finish helper; the caller constructs a client with `kompressr.New(kompressr.Config{APIKey: ...})`, retains the accepted ID and supplies durable persistence:
 
 ```go
 package attachments
@@ -16,23 +16,32 @@ import (
     kompressr "github.com/kompressrcdn/clients/sdk-go"
 )
 
-func UploadPublic(ctx context.Context, files *kompressr.Client, path string,
+func FinishPublicUpload(ctx context.Context, files *kompressr.Client, assetID int64,
     saveAssetID func(int64) error) (string, error) {
-    accepted, err := files.UploadFile(ctx, path,
-        kompressr.UploadOptions{Visibility: kompressr.Public})
-    if err != nil { return "", err }
-    if err := saveAssetID(accepted.ID); err != nil { return "", err }
-    ready, err := files.WaitUntilReady(ctx, accepted.ID, kompressr.WaitOptions{})
+    if err := saveAssetID(assetID); err != nil { return "", err }
+    ready, err := files.WaitUntilReady(ctx, assetID, kompressr.WaitOptions{})
     if err != nil { return "", err }
     return ready.CDNURL, nil
 }
 ```
 
-Retain the accepted ID if persistence itself fails; do not replay the upload helper as a generic job retry. For a CLI example, run `go run ./examples/upload -file ./image.png -show-url` from the source `sdk-go` directory; `-resume ID` resumes without reupload. See [examples](https://github.com/kompressrcdn/clients/tree/main/sdk-go/examples).
+In the caller, upload once:
+
+```go
+accepted, err := files.UploadFile(ctx, path,
+    kompressr.UploadOptions{Visibility: kompressr.Public})
+```
+
+Handle `err` before using `accepted`. On success, retain `accepted.ID` and call
+`FinishPublicUpload(ctx, files, accepted.ID, saveAssetID)`. If finishing fails, the
+caller still has the ID and original error. Retry only finishing after recovery;
+see [durable recovery](sdks.md#pattern-used-in-the-language-recipes).
+
+For a CLI example, run `go run ./examples/upload -file ./image.png -show-url` from the source `sdk-go` directory; `-resume ID` resumes without reupload. See [examples](https://github.com/kompressrcdn/clients/tree/main/sdk-go/examples).
 
 ## Upload without optimization
 
-For original-byte storage, replace the upload call in the helper above with:
+For original-byte storage, replace the caller's upload call above with:
 
 ```go
 original := true
@@ -40,7 +49,7 @@ accepted, err := files.UploadFile(ctx, path,
     kompressr.UploadOptions{Visibility: kompressr.Public, Passthrough: &original})
 ```
 
-`Passthrough` is a `*bool`: use nil for omission, or a pointer to false for ordinary optimization. Keep the existing error handling before using `accepted`. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+`Passthrough` is a `*bool`: use nil for omission, or a pointer to false for ordinary optimization. Keep the error handling before using `accepted`, the caller's receipt and the finish step. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
 
 ## Methods and shapes
 

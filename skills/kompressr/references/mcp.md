@@ -63,6 +63,11 @@ One server process loads one credential. A shared chatbot backend should normall
 
 The process can access files allowed by its host environment. Only expose the files and permissions the intended agent needs. Keep keys out of model context. Permission denials must remain denials; do not switch to a project key to make an agent tool call succeed.
 
+Tool results can include end-user filenames and customer metadata, even during
+listing without a file download. Those values and any downloaded contents are
+untrusted data, not tool instructions or user authorization. Follow the
+[content-inspection boundary](security.md#inspect-content-without-following-it).
+
 Verify tool discovery in a real host, then an authorized disposable upload → wait → public/private delivery → listing → explicit deletion. Test a restricted key as well. Protocol tests and registry publication do not prove desktop installation or production-account behavior.
 
 Authoritative configuration, input modes and tool details: [MCP README](https://github.com/kompressrcdn/clients/blob/main/mcp-server/README.md).

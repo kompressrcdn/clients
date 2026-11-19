@@ -32,13 +32,31 @@ All seven implement these families with language-native names and types. SDKs pr
 
 ## Pattern used in the language recipes
 
-Each recipe's upload helper accepts a **persistence callback** from your application. It uploads once, calls that callback with the accepted ID, then waits. Supply a callback that commits the ID to the database/job record before returning. These are integration helpers, not complete authenticated web endpoints. The linked executable examples offer local receipts for a first CLI test.
+Each recipe keeps uploading in the caller. The caller retains the accepted receipt,
+then passes its ID to a **finish helper** that calls the application's persistence
+callback before waiting. Supply a callback that commits the ID to the database/job
+record before returning. Saving the same ID against the same owner/record must be
+safe to repeat, including when a previous save committed before reporting failure.
+These are application integration helpers, not SDK methods
+or complete authenticated web endpoints.
 
-The original-upload option examples change only the upload call in that helper. Keep ID persistence and failure recovery. A confirmed processed original is already ready; retaining the helper's status check is also valid and does not start a second upload. See [mode confirmation and private delivery](uploads.md).
+The original-upload examples replace only the caller's upload call. Keep the receipt
+and persistence step. A confirmed processed original is already ready; retaining
+the helper's status check is valid and does not start a second upload. See
+[mode confirmation and private delivery](uploads.md).
 
-If persistence fails after acceptance, retain the accepted ID through your application's recovery mechanism and do not automatically rerun the upload. Make job retry behavior resume stored IDs. A callback signature cannot by itself guarantee durable storage.
+If saving or waiting fails or is cancelled, the original failure propagates and the
+caller still has the receipt. Handle recovery there using that ID and its owner
+association; retry only the finish step after resolving the failure. Do not wrap
+both upload and finish in a retrying job or hide the receipt in another helper that
+only returns a URL. An in-memory receipt does not survive a process crash: use the
+application's durable recovery mechanism before ending the request/job, and retain
+only safe identifiers in diagnostics, not credentials or signed URLs.
 
-For private files, change visibility explicitly, wait, authorize the viewer and call the signing method. Do not expose a public URL when the asset is private. See [lifecycle](lifecycle.md) and [security](security.md).
+The shown finish helpers return a public URL. For private files, keep the caller's
+receipt and persistence separation, then wait for private signing readiness,
+authorize the viewer and call the signing method. Do not reuse the public-URL
+return path for a private asset. See [lifecycle](lifecycle.md) and [security](security.md).
 
 ## Common options
 

@@ -10,31 +10,40 @@ gem 'kompressr-sdk', '~> 0.2.0', require: 'kompressr'
 
 For a standalone script, `gem install kompressr-sdk` and `require 'kompressr'`. Native dependency installation may need compiler/OpenSSL development packages.
 
-Integration helper; supply a callback that commits the ID before returning:
+Finish helper; the caller already holds the accepted ID. Supply a callback that commits the ID before returning:
 
 ```ruby
 require 'kompressr'
 
-def upload_public(files, path, save_asset_id:)
-  accepted = files.upload_file(path, visibility: 'public')
-  asset_id = accepted.fetch('id')
+def finish_public_upload(files, asset_id, save_asset_id:)
   save_asset_id.call(asset_id)
   ready = files.wait_until_ready(asset_id)
   ready.fetch('cdn_url')
 end
 ```
 
+In the caller, upload once and retain `accepted` before finishing:
+
+```ruby
+accepted = files.upload_file(path, visibility: 'public')
+url = finish_public_upload(files, accepted.fetch('id'), save_asset_id: save_asset_id)
+```
+
+If finishing raises, the caller still has `accepted.fetch('id')` and the original
+exception. Retry only finishing after recovery; see
+[durable recovery](sdks.md#pattern-used-in-the-language-recipes).
+
 Create `Kompressr::Client.new(api_key: ENV.fetch('KOMPRESSR_API_KEY'))` in backend code. The [private-upload example](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/examples/private_upload.rb) saves a local recovery ID and keeps the private link out of terminal output. The [Rails service example](https://github.com/kompressrcdn/clients/blob/main/sdk-ruby/examples/rails_service.rb) demonstrates application persistence and later-job readiness/signing.
 
 ## Upload without optimization
 
-For original-byte storage, replace the upload call in the helper above with:
+For original-byte storage, replace the caller's upload call above with:
 
 ```ruby
 accepted = files.upload_file(path, visibility: 'public', passthrough: true)
 ```
 
-The option also applies to `upload_bytes`. Read the acknowledgment as `accepted.fetch('passthrough')`; response keys remain strings. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+The option also applies to `upload_bytes`. Read the acknowledgment as `accepted.fetch('passthrough')`; response keys remain strings. Keep the caller's receipt and the finish step. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
 
 ## Methods and shapes
 

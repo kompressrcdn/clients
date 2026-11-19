@@ -6,7 +6,7 @@
 composer require kompressr/sdk:^0.2.0
 ```
 
-Standalone scripts load Composer's autoloader; framework bootstrapping normally already does so. Integration helper with a persistence callback:
+Standalone scripts load Composer's autoloader; framework bootstrapping normally already does so. Finish helper with a persistence callback; the caller already holds the accepted ID:
 
 ```php
 <?php
@@ -15,26 +15,35 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Kompressr\Client;
 
-function uploadPublic(Client $files, string $path, callable $saveAssetId): string
+function finishPublicUpload(Client $files, int $assetId, callable $saveAssetId): string
 {
-    $accepted = $files->uploadFile($path, ['visibility' => 'public']);
-    $saveAssetId($accepted['id']); // Commit before returning.
-    $ready = $files->waitUntilReady($accepted['id']);
+    $saveAssetId($assetId); // Commit before returning.
+    $ready = $files->waitUntilReady($assetId);
     return $ready['cdn_url'];
 }
 ```
+
+In the caller, upload once and retain `$accepted` before finishing:
+
+```php
+$accepted = $files->uploadFile($path, ['visibility' => 'public']);
+$url = finishPublicUpload($files, $accepted['id'], $saveAssetId);
+```
+
+If finishing throws, the caller still has `$accepted['id']` and the original error.
+Retry only finishing after recovery; see [durable recovery](sdks.md#pattern-used-in-the-language-recipes).
 
 Create `new Client(['apiKey' => getenv('KOMPRESSR_API_KEY') ?: ''])` in trusted backend code. [Executable examples](https://github.com/kompressrcdn/clients/tree/main/sdk-php/examples) include public/private uploads, receipts and resume.
 
 ## Upload without optimization
 
-For original-byte storage, replace the upload call in the helper above with:
+For original-byte storage, replace the caller's upload call above with:
 
 ```php
 $accepted = $files->uploadFile($path, ['visibility' => 'public', 'passthrough' => true]);
 ```
 
-Use a boolean, not a string. `uploadBytes` accepts the same option. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+Use a boolean, not a string. `uploadBytes` accepts the same option. Keep the caller's receipt and the finish step. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
 
 ## Methods and shapes
 

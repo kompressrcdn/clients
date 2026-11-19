@@ -42,6 +42,12 @@ All tracked content and release artifacts are public. Use reserved example domai
 
 See package contribution notes for memory checks. Report bugs through [issues](https://github.com/kompressrcdn/clients/issues) and security concerns through [SECURITY.md](SECURITY.md).
 
+The common checks also run `node --test scripts/skill-examples.test.mjs`. This
+executes the JavaScript/Python skill snippets with synthetic SDK results to check
+persistence ordering, cancellation and recovery without repeating uploads. It
+requires Node and Python, makes no live requests and does not replace native SDK
+verification or behavioral evaluation of an agent reading untrusted content.
+
 Release tooling changes can be checked without registry credentials or publication:
 
 ```sh
