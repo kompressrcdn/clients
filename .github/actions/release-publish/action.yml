@@ -32,6 +32,9 @@ inputs:
     default: ''
     description: NuGet trusted publisher username
 outputs:
+  upload:
+    description: Whether the retained package still needs uploading
+    value: ${{ steps.retain.outputs.upload }}
   artifact-id:
     description: Authenticated package files for the isolated consumer
     value: ${{ steps.consumer-artifact.outputs.artifact-id }}
@@ -108,11 +111,6 @@ runs:
         run: python automation/scripts/release/release.py retain "$PACKAGE" "$RELEASE_DIR"
         env:
           GH_TOKEN: ${{ github.token }}
-      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086
-        if: inputs.package == 'python' && steps.retain.outputs.upload == 'true'
-        with:
-          packages-dir: pypi-dist/
-          skip-existing: true
       - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841
         id: nuget
         if: inputs.package == 'dotnet' && steps.retain.outputs.upload == 'true'
@@ -132,12 +130,14 @@ runs:
           MAVEN_CENTRAL_PASSWORD: ${{ inputs.central-password }}
           PHP_MIRROR_TOKEN: ${{ inputs.php-token }}
       - name: Prepare authenticated consumer handoff
+        if: inputs.package != 'python'
         shell: bash
         run: python automation/scripts/release/release.py handoff "$PACKAGE" "$RELEASE_DIR"
         env:
           GH_TOKEN: ${{ github.token }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         id: consumer-artifact
+        if: inputs.package != 'python'
         with:
           name: retained-${{ inputs.package }}-${{ github.run_attempt }}
           path: consumer-artifacts/*

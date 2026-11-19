@@ -1,10 +1,41 @@
 """Install an exact public release into a fresh consumer and exercise its entry point."""
 import os
+import re
+import subprocess
+import time
 from pathlib import Path
 import shutil
 import sys
 import tempfile
 from release import ROOT, KEYS, STABLE, require, run, write_json, consumer_environment
+
+
+def install_npm(name, version, work, env, *, timeout=600, retry_delay=20):
+    """Wait for a just-published npm version without replaying publication."""
+    deadline = time.monotonic() + timeout
+    command = ['npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund',
+               '--prefer-online', '--registry=https://registry.npmjs.org', f'{name}@{version}']
+    while True:
+        remaining = deadline - time.monotonic()
+        require(remaining > 0, 'Timed out installing the newly published npm package')
+        try:
+            result = subprocess.run(command, cwd=work, env=env, text=True,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                    timeout=min(60, remaining), check=False)
+        except subprocess.TimeoutExpired:
+            retryable = True
+        else:
+            if result.returncode == 0:
+                print(result.stdout)
+                return
+            retryable = re.search(r'npm (?:error|ERR!) code (?:ETARGET|E404|ECONNRESET|ETIMEDOUT|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|E502|E503|E429)\b', result.stdout) is not None
+            if not retryable:
+                print(result.stdout)
+                raise RuntimeError('Public npm installation failed; see preceding output')
+        remaining = deadline - time.monotonic()
+        require(remaining > 0, 'Timed out installing the newly published npm package')
+        print('New npm package is not installable yet; retrying within the installation deadline.')
+        time.sleep(min(retry_delay, remaining))
 
 
 def verify(key, version):
@@ -20,7 +51,7 @@ def verify(key, version):
         if key in KEYS[:2]:
             name = '@kompressr/sdk' if key == 'sdk-js' else '@kompressr/mcp-server'
             write_json(work / 'package.json', {'private': True, 'type': 'module'})
-            cmd('npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org', f'{name}@{version}')
+            install_npm(name, version, work, env)
             if key == 'sdk-js':
                 cmd('node', '--input-type=module', '-e', "import {KompressrClient} from '@kompressr/sdk'; if(typeof KompressrClient !== 'function')throw Error('Missing ESM export')")
                 cmd('node', '--input-type=commonjs', '-e', "if(typeof require('@kompressr/sdk').KompressrClient !== 'function')throw Error('Missing CJS export')")
