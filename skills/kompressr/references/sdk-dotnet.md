@@ -6,37 +6,47 @@
 dotnet add package Kompressr.Sdk --version 0.2.0
 ```
 
-Integration helper; provide an async persistence callback that commits the ID:
+Finish helper; the caller already holds the accepted ID. Provide an async persistence callback that commits the ID:
 
 ```csharp
 using Kompressr.Sdk;
 
 public static class Attachments
 {
-    public static async Task<string?> UploadPublicAsync(
-        KompressrClient files, string path, Func<long, Task> saveAssetId)
+    public static async Task<string?> FinishPublicUploadAsync(
+        KompressrClient files, long assetId, Func<long, Task> saveAssetId)
     {
-        var accepted = await files.UploadFileAsync(path,
-            new UploadOptions { Visibility = "public" });
-        await saveAssetId(accepted.Id);
-        var ready = await files.WaitUntilReadyAsync(accepted.Id);
+        await saveAssetId(assetId);
+        var ready = await files.WaitUntilReadyAsync(assetId);
         return ready.CdnUrl;
     }
 }
 ```
 
+In the caller, upload once and retain `accepted` before finishing:
+
+```csharp
+var accepted = await files.UploadFileAsync(path,
+    new UploadOptions { Visibility = "public" });
+var url = await Attachments.FinishPublicUploadAsync(files, accepted.Id, saveAssetId);
+```
+
+If finishing fails or is cancelled, the caller still has `accepted.Id` and the
+original exception. Retry only finishing after recovery; see
+[durable recovery](sdks.md#pattern-used-in-the-language-recipes).
+
 Create with `new KompressrClient(new ClientOptions { ApiKey = ... })`, loading the secret from server configuration. Reuse the client; it supports concurrent calls and requires no persistent-connection disposal. [Runnable examples](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/examples/Program.cs) cover additional flows.
 
 ## Upload without optimization
 
-For original-byte storage, replace the upload call in the helper above with:
+For original-byte storage, replace the caller's upload call above with:
 
 ```csharp
 var accepted = await files.UploadFileAsync(path,
     new UploadOptions { Visibility = "public", Passthrough = true });
 ```
 
-`Passthrough` is nullable: null omits the option, false preserves optimization. The option also applies to `UploadBytesAsync`. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+`Passthrough` is nullable: null omits the option, false preserves optimization. The option also applies to `UploadBytesAsync`. Keep the caller's receipt and the finish step. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
 
 ## Methods and shapes
 

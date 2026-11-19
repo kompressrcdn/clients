@@ -29,7 +29,7 @@ jobs:
         run: python scripts/release/changes.py "$RUNNER_TEMP/selection.json"
       - name: Check shared source, contracts and metadata
         run: |
-          node --test scripts/public-content.test.mjs scripts/distribution.test.mjs scripts/mcp-release-metadata.test.mjs
+          node --test scripts/public-content.test.mjs scripts/distribution.test.mjs scripts/mcp-release-metadata.test.mjs scripts/skill-examples.test.mjs
           node scripts/check-public-content.mjs
           node scripts/verify-contract.mjs
           node scripts/verify-mcp-metadata.mjs

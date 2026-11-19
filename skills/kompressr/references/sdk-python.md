@@ -6,7 +6,7 @@ Python 3.11+. Use `KompressrClient` for synchronous Django views, scripts and wo
 python -m pip install kompressr-sdk
 ```
 
-Async integration helper; provide an async `save_asset_id` callback that commits the ID before returning:
+Async finish helper; the caller already holds the accepted ID. Provide an async `save_asset_id` callback that commits the ID before returning:
 
 ```python
 import os
@@ -14,12 +14,22 @@ from kompressr import AsyncKompressrClient
 
 files = AsyncKompressrClient(api_key=os.environ['KOMPRESSR_API_KEY'])
 
-async def upload_public(path, save_asset_id):
-    accepted = await files.upload_file(path, visibility='public')
-    await save_asset_id(accepted['id'])
-    ready = await files.wait_until_ready(accepted['id'])
+async def finish_public_upload(asset_id, save_asset_id):
+    await save_asset_id(asset_id)
+    ready = await files.wait_until_ready(asset_id)
     return ready['cdn_url']
 ```
+
+Inside your async caller, upload once and retain `accepted` before finishing:
+
+```python
+accepted = await files.upload_file(path, visibility='public')
+url = await finish_public_upload(accepted['id'], save_asset_id)
+```
+
+If finishing raises, the caller retains `accepted['id']` for recovery. After
+resolving the failure, retry only `finish_public_upload` on that ID. Preserve native
+cancellation; see [durable recovery](sdks.md#pattern-used-in-the-language-recipes).
 
 In a synchronous application, instantiate `KompressrClient`, use a synchronous persistence callback and call those same methods without `await`. Do not call `asyncio.run()` inside an already-running web event loop.
 
@@ -34,13 +44,13 @@ It defaults to private delivery; use `--public` only for public files. Its outpu
 
 ## Upload without optimization
 
-For original-byte storage, replace the upload call in the helper above with:
+For original-byte storage, replace the caller's upload call above with:
 
 ```python
 accepted = await files.upload_file(path, visibility='public', passthrough=True)
 ```
 
-For the synchronous client, use the same keywords without `await`. The option also applies to `upload_bytes` and supported `upload_stream` inputs. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+For the synchronous client, use the same keywords without `await`. The option also applies to `upload_bytes` and supported `upload_stream` inputs. Keep the caller's receipt and the finish step. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
 
 ## Methods and shapes
 
