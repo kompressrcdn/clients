@@ -30,6 +30,18 @@ func UploadPublic(ctx context.Context, files *kompressr.Client, path string,
 
 Retain the accepted ID if persistence itself fails; do not replay the upload helper as a generic job retry. For a CLI example, run `go run ./examples/upload -file ./image.png -show-url` from the source `sdk-go` directory; `-resume ID` resumes without reupload. See [examples](https://github.com/kompressrcdn/clients/tree/main/sdk-go/examples).
 
+## Upload without optimization
+
+For original-byte storage, replace the upload call in the helper above with:
+
+```go
+original := true
+accepted, err := files.UploadFile(ctx, path,
+    kompressr.UploadOptions{Visibility: kompressr.Public, Passthrough: &original})
+```
+
+`Passthrough` is a `*bool`: use nil for omission, or a pointer to false for ordinary optimization. Keep the existing error handling before using `accepted`. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+
 ## Methods and shapes
 
 Every HTTP operation takes `context.Context` first and a typed options value last. Use native `time.Duration` values. `UploadAccepted.ID` is the recovery ID; `UploadAsset.CDNURL` is public delivery. `GeneratePrivateURL(ctx, id, kompressr.PrivateURLOptions{})` returns `PrivateURL.PrivateURL`; sign only after private readiness and app authorization.

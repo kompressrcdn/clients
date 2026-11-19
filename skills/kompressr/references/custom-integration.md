@@ -11,7 +11,7 @@ Implement only the operation families the application needs, with room to add ot
 Suggested interface, adapted to language conventions:
 
 ```text
-upload_file(path_or_supported_stream, visibility, metadata) -> accepted asset ID
+upload_file(path_or_supported_stream, visibility, metadata, optional_passthrough) -> accepted asset ID and mode/readiness fields
 get_upload_status(asset_id) -> validated processing record
 wait_until_ready(asset_id, deadline, cancellation) -> ready record
 generate_private_url(asset_id, expires_in) -> signed link and expiry
@@ -28,9 +28,9 @@ Keep the management and upload origins configurable for local tests, with produc
 ## Upload implementation
 
 1. Validate inputs before network dispatch: supported visibility, nonempty file name, regular readable path or explicitly supported bounded stream, positive timing values, scalar metadata limits.
-2. Create streaming multipart with options first and the file last. Let the library generate the boundary/header. Preserve bytes; do not base64-encode the file or put a local path in JSON.
+2. For original storage, use `POST /api/upload?passthrough=true`; accept a boolean option and never put it in multipart. Omitted/false retains optimization. Create streaming multipart with the other options first and the file last. Let the library generate the boundary/header. Preserve bytes; do not base64-encode the file or put a local path in JSON.
 3. Send the bearer key to the upload origin, with a finite total deadline covering upload and response reading. For large files, stream instead of loading the whole file into RAM. Account for application/proxy limits separately.
-4. Read a bounded JSON response. Validate `success=true` and a positive integer `data.asset_id` in the compatibility range. Reject booleans, numeric strings and fractional IDs.
+4. Read a bounded JSON response. Validate `success=true` and a positive integer `data.asset_id` in the compatibility range. Reject booleans, numeric strings and fractional IDs. For a requested original upload, require true `data.passthrough` confirmation before treating it as successful original storage, and check the processed/active response before delivery. Preserve any safe ID on a failed confirmation, following [upload modes](uploads.md).
 5. Return the ID immediately to the caller so it can commit ownership/recovery state before waiting. Do not start a second upload if subsequent polling/persistence fails.
 
 On a broken connection, timeout or invalid success response after dispatch, mark the write outcome uncertain. A safe numeric `data.asset_id` may be recoverable from a parsed envelope with boolean `success`, including failed envelopes and non-2xx responses. Such upload errors remain uncertain and need status checks or cleanup; do not regex-extract IDs from broken JSON or HTML. Before dispatch, local validation/cancellation means no write was sent. Neither case should be turned into an automatic mutation replay.
@@ -53,6 +53,8 @@ return wait-timeout with saved ID
 ```
 
 A typical initial wait budget is 120 seconds with a roughly two-second poll interval. This is not a guaranteed processing time. Resume from the saved ID later. The signing step remains explicit after private readiness and authorization.
+
+A confirmed processed original upload does not need an optimization wait. A common adapter can still use the status algorithm above to obtain current state and private signing readiness. Never infer original mode from status alone: optimized uploads can also already be processed.
 
 Use a monotonic clock for deadlines; network attempts, response-body reads and retry delays share that budget. Cancellation stops your request/wait, not an accepted remote job. Respect your language's structured cancellation convention rather than swallowing it as an ordinary success.
 
@@ -89,6 +91,9 @@ Use a local HTTP fixture or mock server in the chosen language before an authori
 | Scenario | Expected result |
 | --- | --- |
 | Multipart upload | Options precede the binary file; bytes/name preserved; only one POST |
+| Original upload, including empty input | Query contains `passthrough=true`, no multipart flag; true acknowledgment and processed/active response; exact downloaded bytes |
+| Requested original mode, missing/false acknowledgment | Preserve safe ID and uncertainty; no automatic repeat or optimized fallback |
+| Omitted/false original-mode option | Existing optimized upload behavior remains |
 | Accepted → pending → processed | ID persisted before polling; return current public URL only when ready |
 | Private processed file | No public URL; signing occurs only after explicit app authorization |
 | Failed/unknown/deleting response | Stop with an error and saved ID |

@@ -3,12 +3,14 @@
 ## Upload through to delivery
 
 1. Validate file/visibility requirements and authenticate the application user.
-2. Upload once with the selected credential. In raw HTTP, multipart options precede the file.
+2. [Choose optimization or original-byte storage](uploads.md) and upload once with the selected credential. In raw HTTP, passthrough belongs in the query; multipart options precede the file.
 3. Persist the numeric asset ID before waiting. SDKs normalize acceptance `data.asset_id` to the language's `id`/`ID`/`Id` field.
-4. Poll within a finite deadline. SDK readiness helpers do this. Pending/processing means wait; failed, unprocessable, deleted or unknown states must not become successful delivery results.
+4. Confirm the selected mode and readiness. Original uploads confirm `passthrough: true` and `processed` in their successful upload response; they need no processing wait. For pending/processing optimized uploads, poll within a finite deadline using the SDK readiness helper. Failed, unprocessable, deleted or unknown states must not become successful delivery results.
 5. For a processed public asset, use its current `cdn_url`. For a processed private asset, require `can_generate_private_url`, authorize the viewer and explicitly generate a fresh signed link.
 
 A `processed` response missing a public URL or private signing readiness is invalid, not permission to construct a URL. Upload status uses named states; managed-asset records also expose numeric `processing_status`. Use the correct response shape.
+
+Private signing readiness comes from the status/readiness response, not an assumed field on upload acceptance. For original uploads omit the signing variant; there are no AVIF or optimized variants. Preserve the returned delivery URL unchanged and do not derive it from the filename.
 
 ## Identifiers
 

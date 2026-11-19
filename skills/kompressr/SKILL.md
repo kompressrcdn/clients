@@ -1,17 +1,17 @@
 ---
 name: kompressr
-description: Explain, integrate and troubleshoot Kompressr file optimization, storage and CDN delivery. Use when a developer asks to connect a website or app to Kompressr using URL prepend, a language SDK, the HTTP Upload API, private links, scoped user keys or MCP. Includes product fit, project setup, framework integration, lifecycle recovery and verification.
+description: Explain, integrate and troubleshoot Kompressr file optimization, uploads with or without optimization, and CDN delivery. Use when a developer asks to connect a website or app using URL prepend, a language SDK, the HTTP Upload API, private links, scoped user keys or MCP. Includes setup, framework integration, lifecycle recovery and verification.
 license: MIT
 metadata:
   author: Kompressr
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Kompressr
 
 Help the developer reach a working, verified integration in their existing application. Explain the product when asked; implement only the changes the user requests. Keep their framework, hosting and authentication choices unless a concrete compatibility issue requires a change.
 
-Kompressr optimizes supported files and delivers them through a CDN. Existing website files can stay on their origin; applications can also upload files for Kompressr to store. SDKs and the HTTP API manage uploads and files. MCP exposes file operations to an agent host. This skill supplies integration knowledge and works without MCP.
+Kompressr optimizes supported files or stores original bytes without optimization, then delivers them through a CDN. Existing website files can stay on their origin; applications can also upload files for Kompressr to store. SDKs and the HTTP API manage uploads and files. MCP exposes file operations to an agent host. This skill supplies integration knowledge and works without MCP.
 
 ## Start with the developer's task
 
@@ -22,6 +22,7 @@ Inspect the application's language/runtime, framework, file sources, deployment 
 | Understand the product, benefits, limitations or plan fit | Explain capabilities against their workload | [Product guide](references/product.md) |
 | Optimize public files already hosted on a website | URL prepend; retain the origin | [Website URLs](references/url-prepend.md) |
 | Upload user files or generated output from an application | Official SDK matching the supported backend runtime | [SDK selection](references/sdks.md), then its language reference |
+| Preserve exact bytes or upload a file outside the optimization formats | Original upload on an enabled eligible plan | [Choose an upload mode](references/uploads.md), then the SDK, HTTP or MCP reference |
 | Use a language/runtime with no compatible official SDK, or request raw HTTP | Native HTTP integration with explicit lifecycle/error handling | [HTTP API](references/http-api.md) and [custom integration blueprint](references/custom-integration.md) |
 | Deliver restricted documents or isolate customers/agents | Private uploads, app authorization and scoped keys where eligible | [Security and tenancy](references/security.md) |
 | Connect an agent host to file tools | Local stdio MCP server | [MCP](references/mcp.md) |
@@ -31,7 +32,7 @@ The same application can combine website URL prepend and uploads. Follow a devel
 
 ## Integration workflow
 
-1. **Establish fit.** Explain what will be optimized and where files will live. Read the product guide if capabilities or tradeoffs matter. Check current [pricing and file support](https://kompressr.com/pricing#file-support) before recommending a plan or promising a format/limit.
+1. **Establish fit.** Explain where files will live and [choose the upload mode](references/uploads.md) for applications: optimization or preserving original bytes. Honor an explicit choice. Read the product guide if capabilities or tradeoffs matter. Check current [pricing and file support](https://kompressr.com/pricing#file-support) before recommending a plan or promising a format/limit.
 2. **Set up the right project.** Follow [account, project and credential setup](references/setup.md). Website domain verification and upload credentials serve different workflows. Use a Platform/AI project for scoped identities. Keep environments separate.
 3. **Implement one complete path.** Read the route reference and, where relevant, [framework integration](references/frameworks.md). Adapt its code to the real application's authentication, persistence and upload types. Identify illustrative application hooks; do not leave undefined helpers in code presented as runnable.
 4. **Handle the next request.** Follow [lifecycle and recovery](references/lifecycle.md): persist IDs, resume timeouts, refresh private links and retain per-item bulk results. A feature is incomplete if it only works on its first successful call.
@@ -40,7 +41,7 @@ The same application can combine website URL prepend and uploads. Follow a devel
 
 ## Rules that change implementation decisions
 
-- **Upload acceptance is not readiness.** Save the numeric asset ID before waiting. A returned URL can precede a usable file. Use the current processed public URL, or wait for private signing readiness and mint a fresh link. A wait timeout does not justify reuploading.
+- **Confirm the selected mode and readiness.** Save the numeric asset ID. Optimized uploads may need processing; a successful original upload confirms `passthrough: true` and is already `processed`. A URL alone proves neither. Follow [upload modes](references/uploads.md) for delivery and acknowledgment failures; a wait timeout does not justify reuploading.
 - **Website first-request behavior differs.** URL prepend may deliver the origin file while optimization runs. Keep the origin accessible; inspect a subsequent request and measure the actual delivered result.
 - **Keep master keys on trusted backends.** A project UUID in a public CDN URL is not a secret key. Browser/mobile code must never receive project authority. Scoped keys restrict identity/actions but do not replace application login or conversation authorization.
 - **Permissions and plan limits remain enforced.** SDK construction and key selection cannot bypass them. Omitted scopes use defaults; explicitly empty scopes must be rejected. Deletion is an explicit additional scope.
@@ -54,6 +55,7 @@ The same application can combine website URL prepend and uploads. Follow a devel
 
 - [Product, benefits, limits and measurement](references/product.md)
 - [Account, projects, plans and credentials](references/setup.md)
+- [Optimized uploads and original-byte storage](references/uploads.md)
 - [URL prepend, variants and existing-site rollout](references/url-prepend.md)
 - [SDK selection and operation map](references/sdks.md)
 - SDK recipes: [JavaScript/TypeScript](references/sdk-js.md), [Python](references/sdk-python.md), [Go](references/sdk-go.md), [Java](references/sdk-java.md), [.NET](references/sdk-dotnet.md), [PHP](references/sdk-php.md), [Ruby](references/sdk-ruby.md)

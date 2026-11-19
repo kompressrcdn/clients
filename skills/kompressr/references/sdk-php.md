@@ -3,7 +3,7 @@
 64-bit PHP 8.1+, Composer 2 and `ext-curl` with asynchronous DNS. Synchronous calls work in Laravel, Symfony or plain PHP; they occupy the current request/worker until completion.
 
 ```sh
-composer require kompressr/sdk:^0.1
+composer require kompressr/sdk:^0.2.0
 ```
 
 Standalone scripts load Composer's autoloader; framework bootstrapping normally already does so. Integration helper with a persistence callback:
@@ -25,6 +25,16 @@ function uploadPublic(Client $files, string $path, callable $saveAssetId): strin
 ```
 
 Create `new Client(['apiKey' => getenv('KOMPRESSR_API_KEY') ?: ''])` in trusted backend code. [Executable examples](https://github.com/kompressrcdn/clients/tree/main/sdk-php/examples) include public/private uploads, receipts and resume.
+
+## Upload without optimization
+
+For original-byte storage, replace the upload call in the helper above with:
+
+```php
+$accepted = $files->uploadFile($path, ['visibility' => 'public', 'passthrough' => true]);
+```
+
+Use a boolean, not a string. `uploadBytes` accepts the same option. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
 
 ## Methods and shapes
 

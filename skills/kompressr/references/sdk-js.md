@@ -26,6 +26,16 @@ export async function uploadPublic(path, saveAssetId) {
 
 For a first CLI test, use the [executable public-upload example](https://github.com/kompressrcdn/clients/blob/main/sdk-js/examples/public-upload.mjs), which saves a receipt. [Private upload walkthrough](https://github.com/kompressrcdn/clients/blob/main/guides/private-upload.md) includes setup, output and resume instructions.
 
+## Upload without optimization
+
+For original-byte storage, replace the upload call in the helper above with:
+
+```js
+const accepted = await files.uploadFile(path, { visibility: 'public', passthrough: true });
+```
+
+The same option is available on `uploadBlob` and `uploadBytes`. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+
 ## Methods and shapes
 
 `uploadFile(path, options)`, `uploadBlob(blob, filename, options)` and `uploadBytes(bytes, filename, options)` return acceptance with `id`. Status/readiness return API-style fields such as `cdn_url` and `can_generate_private_url`; success envelopes are removed.

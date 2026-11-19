@@ -27,6 +27,17 @@ public static class Attachments
 
 Create with `new KompressrClient(new ClientOptions { ApiKey = ... })`, loading the secret from server configuration. Reuse the client; it supports concurrent calls and requires no persistent-connection disposal. [Runnable examples](https://github.com/kompressrcdn/clients/blob/main/sdk-dotnet/examples/Program.cs) cover additional flows.
 
+## Upload without optimization
+
+For original-byte storage, replace the upload call in the helper above with:
+
+```csharp
+var accepted = await files.UploadFileAsync(path,
+    new UploadOptions { Visibility = "public", Passthrough = true });
+```
+
+`Passthrough` is nullable: null omits the option, false preserves optimization. The option also applies to `UploadBytesAsync`. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+
 ## Methods and shapes
 
 Public results use `Id` and `CdnUrl`. Private upload: `new UploadOptions { Visibility = "private" }`, persist/wait, then `GeneratePrivateUrlAsync(id, new PrivateUrlOptions { ExpiresIn = 3600 })`. Return `link.Url` only to an authorized recipient.

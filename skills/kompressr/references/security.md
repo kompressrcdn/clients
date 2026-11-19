@@ -59,6 +59,7 @@ Default scopes: `upload`, `status`, `list`, `private_url`. Default visibility pe
 - Omitted scopes use defaults. A nonempty supplied set replaces them; include every required action.
 - **Do not use an empty scope list to mean no access.** SDKs reject it; the HTTP API treats it as defaults. If permission filtering leaves no actions, do not issue the key.
 - `allowed_asset_types` has separate semantics: empty/omitted allows all supported types. Use the [numeric file-family identifiers](http-api.md#restrict-file-families) for a restriction. If no families remain after filtering, do not issue a key; sending `[]` would allow all supported types.
+- Original uploads require File (11) in a restricted type list, even for an uploaded image. An image-only restriction does not grant original-file storage. Keep the intended restriction; changing it requires the application's authorization. See [upload modes](uploads.md).
 - Expiry, visibility, types and action scopes can all deny a request. Preserve the denial; never retry with a master credential to make it succeed.
 - Deleting files requires explicit application intent plus service authority. Granting upload access alone must not grant deletion.
 

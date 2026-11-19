@@ -35,6 +35,16 @@ public final class Attachments {
 
 Create the client with `KompressrClient.builder(System.getenv("KOMPRESSR_API_KEY")).build()`. Reuse it in a service and close on shutdown; short CLI programs can use try-with-resources. [Executable examples](https://github.com/kompressrcdn/clients/tree/main/sdk-java/examples) and the [README](https://github.com/kompressrcdn/clients/blob/main/sdk-java/README.md) provide build/run commands and durable upload receipts.
 
+## Upload without optimization
+
+For original-byte storage, replace the upload call in the helper above with:
+
+```java
+var accepted = files.uploadFile(path, Options.Upload.publicFile().withPassthrough(true));
+```
+
+Use `Options.Upload.privateFile().withPassthrough(true)` for private originals. Both file and byte upload methods accept this option. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+
 ## Methods and shapes
 
 Use `Options.Upload.privateFile()` for private uploads; persist `accepted.id()`, wait and call `generatePrivateUrl(id)` after authorization. Results are typed records, not JavaScript dictionaries. Consult the [API reference](https://github.com/kompressrcdn/clients/blob/main/sdk-java/API.md) for record accessors and overloads.
