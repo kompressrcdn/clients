@@ -25,6 +25,11 @@ Private signing readiness comes from the status/readiness response, not an assum
 
 Use a durable application record. CLI receipt files demonstrate recovery but do not replace deployed database/job storage. Preserve the project/owner association so an ID supplied later cannot bypass authorization.
 
+Keep upload acceptance in the caller before invoking persistence/readiness work.
+The [language recipes](sdks.md#pattern-used-in-the-language-recipes) separate these
+steps so a failed save or cancellation cannot hide the accepted ID inside a helper.
+Recover on that ID; do not rerun uploading because saving or waiting failed.
+
 ## Timeouts, cancellation and retries
 
 SDK defaults: management 30 seconds, upload 600 seconds, readiness wait 120 seconds with roughly two-second polling. Request budgets include response bodies and retries. A readiness timeout is a caller budget, not a processing SLA. JavaScript/PHP options use milliseconds; Python/Ruby use seconds; Go/Java/.NET use native duration types.

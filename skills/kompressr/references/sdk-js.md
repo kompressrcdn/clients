@@ -6,7 +6,7 @@ Node.js 22+. ESM, CommonJS and TypeScript declarations are provided. This releas
 npm install @kompressr/sdk
 ```
 
-Integration helper; `saveAssetId` is supplied by your application and must persist before resolving:
+Finish helper; the caller already holds the accepted ID. `saveAssetId` is supplied by your application and must persist before resolving:
 
 ```js
 import { KompressrClient } from '@kompressr/sdk';
@@ -16,25 +16,35 @@ const files = new KompressrClient({
   projectId: process.env.KOMPRESSR_PROJECT_ID,
 });
 
-export async function uploadPublic(path, saveAssetId) {
-  const accepted = await files.uploadFile(path, { visibility: 'public' });
-  await saveAssetId(accepted.id);
-  const ready = await files.waitUntilReady(accepted.id);
+export async function finishPublicUpload(assetId, saveAssetId) {
+  await saveAssetId(assetId);
+  const ready = await files.waitUntilReady(assetId);
   return ready.cdn_url;
 }
 ```
+
+In the caller, upload once and retain `accepted` before invoking the helper:
+
+```js
+const accepted = await files.uploadFile(path, { visibility: 'public' });
+const url = await finishPublicUpload(accepted.id, saveAssetId);
+```
+
+Handle a failed/cancelled finish in this caller with `accepted.id` still available.
+After resolving the failure, retry only `finishPublicUpload` on that ID. Keep the
+receipt out of a wrapper that loses it on error; see [durable recovery](sdks.md#pattern-used-in-the-language-recipes).
 
 For a first CLI test, use the [executable public-upload example](https://github.com/kompressrcdn/clients/blob/main/sdk-js/examples/public-upload.mjs), which saves a receipt. [Private upload walkthrough](https://github.com/kompressrcdn/clients/blob/main/guides/private-upload.md) includes setup, output and resume instructions.
 
 ## Upload without optimization
 
-For original-byte storage, replace the upload call in the helper above with:
+For original-byte storage, replace the caller's upload call above with:
 
 ```js
 const accepted = await files.uploadFile(path, { visibility: 'public', passthrough: true });
 ```
 
-The same option is available on `uploadBlob` and `uploadBytes`. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+The same option is available on `uploadBlob` and `uploadBytes`. Keep the caller's receipt and the finish step. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
 
 ## Methods and shapes
 

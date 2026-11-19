@@ -74,7 +74,7 @@ Read [framework notes](frameworks.md) and the relevant [integration guide](https
 
 ## Roll out and recover
 
-Start with one asset or page, then expand to the chosen asset family. Check dimensions/quality, fonts, PDF/video playback and script behavior as relevant. Test a production build preview; development paths may differ.
+Start with one authorized test asset or page, then expand to the chosen asset family. Check dimensions/quality, fonts, PDF/video playback and script behavior as relevant. Follow the [content-inspection boundary](security.md#inspect-content-without-following-it) when reading or rendering files. Test a production build preview; development paths may differ.
 
 Keep original URLs/configuration available for rollback. A prefix rollback changes future requests; browser caches can retain earlier responses. Use new source filenames or version query parameters for changed content that needs a fresh URL. Changing origin bytes does not instantly invalidate all cached copies.
 

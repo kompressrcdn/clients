@@ -14,36 +14,43 @@ Add to Maven dependencies:
 
 Gradle equivalent: `implementation("com.kompressr:kompressr-sdk:0.2.0")`.
 
-Integration helper; the `saveAssetId` callback must commit the ID before returning:
+Finish helper; the caller already holds the accepted ID. The `saveAssetId` callback must commit the ID before returning:
 
 ```java
 import com.kompressr.KompressrClient;
 import com.kompressr.Options;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.function.LongConsumer;
 
 public final class Attachments {
-    public static String uploadPublic(KompressrClient files, Path path,
-                                      LongConsumer saveAssetId) throws IOException {
-        var accepted = files.uploadFile(path, Options.Upload.publicFile());
-        saveAssetId.accept(accepted.id());
-        return files.waitUntilReady(accepted.id()).cdnUrl();
+    public static String finishPublicUpload(KompressrClient files, long assetId,
+                                            LongConsumer saveAssetId) {
+        saveAssetId.accept(assetId);
+        return files.waitUntilReady(assetId).cdnUrl();
     }
 }
 ```
+
+In the caller, with `path` a `java.nio.file.Path`, upload once and retain the receipt:
+
+```java
+var accepted = files.uploadFile(path, Options.Upload.publicFile());
+var url = Attachments.finishPublicUpload(files, accepted.id(), saveAssetId);
+```
+
+If finishing throws, the caller still has `accepted.id()` and the original exception.
+Retry only finishing after recovery; see [durable recovery](sdks.md#pattern-used-in-the-language-recipes).
 
 Create the client with `KompressrClient.builder(System.getenv("KOMPRESSR_API_KEY")).build()`. Reuse it in a service and close on shutdown; short CLI programs can use try-with-resources. [Executable examples](https://github.com/kompressrcdn/clients/tree/main/sdk-java/examples) and the [README](https://github.com/kompressrcdn/clients/blob/main/sdk-java/README.md) provide build/run commands and durable upload receipts.
 
 ## Upload without optimization
 
-For original-byte storage, replace the upload call in the helper above with:
+For original-byte storage, replace the caller's upload call above with:
 
 ```java
 var accepted = files.uploadFile(path, Options.Upload.publicFile().withPassthrough(true));
 ```
 
-Use `Options.Upload.privateFile().withPassthrough(true)` for private originals. Both file and byte upload methods accept this option. Keep the helper's ID persistence and recovery. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
+Use `Options.Upload.privateFile().withPassthrough(true)` for private originals. Both file and byte upload methods accept this option. Keep the caller's receipt and the finish step. Follow [upload modes](uploads.md) for eligibility, confirmation, immediate readiness and private signing.
 
 ## Methods and shapes
 
